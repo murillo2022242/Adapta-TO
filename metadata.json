@@ -1,0 +1,6 @@
+{
+  "name": "adaptaTO — Clínica de Fonoaudiologia",
+  "description": "Website institucional, agendamento online e assistente virtual da clínica de fonoaudiologia adaptaTO.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
