@@ -2,21 +2,30 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { NextFunction, Request, Response } from 'express';
-import { db } from './db.ts';
+import { DATA_DIR, IS_EPHEMERAL_STORAGE, db } from './db.ts';
 import type { AuthUser } from '../src/types.ts';
 
 function resolveSessionSecret(): string {
   if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length >= 16) {
     return process.env.SESSION_SECRET;
   }
-  const secretFile = path.resolve(process.cwd(), 'data', '.session_secret');
-  if (fs.existsSync(secretFile)) {
-    const existing = fs.readFileSync(secretFile, 'utf8').trim();
-    if (existing.length >= 32) return existing;
+  if (IS_EPHEMERAL_STORAGE) {
+    // Stable secret across serverless lambda instances in the same deployment/project
+    const seed = `${process.env.VERCEL_PROJECT_ID || process.env.VERCEL_URL || 'adaptato'}::${process.env.GEMINI_API_KEY || ''}::adaptato-session-v1`;
+    return crypto.createHash('sha256').update(seed).digest('hex');
   }
-  const generated = crypto.randomBytes(48).toString('hex');
-  fs.writeFileSync(secretFile, generated, { mode: 0o600 });
-  return generated;
+  try {
+    const secretFile = path.join(DATA_DIR, '.session_secret');
+    if (fs.existsSync(secretFile)) {
+      const existing = fs.readFileSync(secretFile, 'utf8').trim();
+      if (existing.length >= 32) return existing;
+    }
+    const generated = crypto.randomBytes(48).toString('hex');
+    fs.writeFileSync(secretFile, generated, { mode: 0o600 });
+    return generated;
+  } catch {
+    return crypto.randomBytes(48).toString('hex');
+  }
 }
 
 const SESSION_SECRET = resolveSessionSecret();

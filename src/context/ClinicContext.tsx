@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { getFallbackBootstrapData } from '../data/defaultClinicData.ts';
 import type { FaqItem, Professional, SiteSettings, Specialty, ThemeColors } from '../types.ts';
 
 interface BootstrapData {
@@ -8,6 +9,8 @@ interface BootstrapData {
   faqs: FaqItem[];
   aiConfigured: boolean;
 }
+
+const BOOTSTRAP_CACHE_KEY = 'adaptato_bootstrap_cache_v1';
 
 interface ClinicContextValue {
   loading: boolean;
@@ -38,6 +41,20 @@ function applyCssTheme(theme: ThemeColors): void {
   root.style.setProperty('--color-taupe', theme.taupe);
   root.style.setProperty('--color-ink', theme.ink || '#243028');
   root.style.setProperty('--color-ink-muted', theme.inkMuted || '#56524D');
+}
+
+function readCachedBootstrap(): BootstrapData | null {
+  try {
+    const raw = localStorage.getItem(BOOTSTRAP_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as BootstrapData;
+    if (parsed?.settings?.content && Array.isArray(parsed.specialties)) {
+      return parsed;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  return null;
 }
 
 const PAGE_META: Record<string, { title: string; description: string }> = {
@@ -104,14 +121,30 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     try {
       setError(null);
       const res = await fetch('/api/public/bootstrap');
-      if (!res.ok) throw new Error('Falha ao carregar informações da clínica.');
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || !contentType.includes('application/json')) {
+        throw new Error('Servidor indisponível.');
+      }
       const json = (await res.json()) as BootstrapData;
+      if (!json?.settings || !Array.isArray(json.specialties)) {
+        throw new Error('Resposta inválida do servidor.');
+      }
       setData(json);
       if (json.settings?.theme) {
         applyCssTheme(json.settings.theme);
       }
-    } catch (err: any) {
-      setError(err?.message || 'Erro de conexão com o servidor.');
+      try {
+        localStorage.setItem(BOOTSTRAP_CACHE_KEY, JSON.stringify(json));
+      } catch {
+        // ignore storage quota errors
+      }
+    } catch {
+      const fallback = readCachedBootstrap() || getFallbackBootstrapData();
+      setData(fallback);
+      if (fallback.settings?.theme) {
+        applyCssTheme(fallback.settings.theme);
+      }
+      setError(null);
     } finally {
       setLoading(false);
     }

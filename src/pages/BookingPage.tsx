@@ -17,6 +17,10 @@ import {
 } from 'lucide-react';
 import { useClinic } from '../context/ClinicContext.tsx';
 import { ResilientImage, SpecialtyIcon } from '../components/ClinicIcon.tsx';
+import {
+  computeFallbackMonthAvailability,
+  computeFallbackSlotsForDate,
+} from '../data/defaultClinicData.ts';
 import type { AppointmentStatus, DayAvailabilitySummary } from '../types.ts';
 
 const MONTH_NAMES = [
@@ -221,14 +225,20 @@ export function BookingPage() {
     fetch(
       `/api/appointments/month-availability?professionalId=${professionalId}&month=${currentMonth}`
     )
-      .then((res) => res.json())
+      .then(async (res) => {
+        const ct = res.headers.get('content-type') || '';
+        if (!res.ok || !ct.includes('application/json')) throw new Error('unavailable');
+        return res.json();
+      })
       .then((json) => {
         if (!cancelled) {
           setMonthDays(json.days || []);
         }
       })
       .catch(() => {
-        if (!cancelled) setMonthDays([]);
+        if (!cancelled) {
+          setMonthDays(computeFallbackMonthAvailability(selectedProfessional, currentMonth));
+        }
       })
       .finally(() => {
         if (!cancelled) setLoadingMonth(false);
@@ -236,7 +246,7 @@ export function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [professionalId, currentMonth]);
+  }, [professionalId, currentMonth, selectedProfessional]);
 
   useEffect(() => {
     if (!professionalId || !selectedDate) {
@@ -248,7 +258,11 @@ export function BookingPage() {
     setLoadingSlots(true);
     setSlotNotice('');
     fetch(`/api/appointments/availability?professionalId=${professionalId}&date=${selectedDate}`)
-      .then((res) => res.json())
+      .then(async (res) => {
+        const ct = res.headers.get('content-type') || '';
+        if (!res.ok || !ct.includes('application/json')) throw new Error('unavailable');
+        return res.json();
+      })
       .then((json) => {
         if (!cancelled) {
           setAvailableSlots(json.slots || []);
@@ -259,8 +273,11 @@ export function BookingPage() {
       })
       .catch(() => {
         if (!cancelled) {
-          setAvailableSlots([]);
-          setSlotNotice('Erro ao consultar horários disponíveis.');
+          const fallback = computeFallbackSlotsForDate(selectedProfessional, selectedDate);
+          setAvailableSlots(fallback.slots);
+          if (fallback.slots.length === 0) {
+            setSlotNotice(fallback.reason || 'Sem horários disponíveis nesta data.');
+          }
         }
       })
       .finally(() => {
@@ -269,7 +286,7 @@ export function BookingPage() {
     return () => {
       cancelled = true;
     };
-  }, [professionalId, selectedDate]);
+  }, [professionalId, selectedDate, selectedProfessional]);
 
   const changeMonth = (delta: number) => {
     const [y, m] = currentMonth.split('-').map(Number);

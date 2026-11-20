@@ -1,22 +1,144 @@
-import Database from 'better-sqlite3';
 import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
 import path from 'node:path';
 
-const dataDir = path.resolve(process.cwd(), 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+const require = createRequire(import.meta.url);
+
+export interface DbStatement {
+  run(...params: any[]): { changes: number | bigint; lastInsertRowid: number | bigint };
+  get(...params: any[]): any;
+  all(...params: any[]): any[];
 }
 
-const uploadsDir = path.resolve(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
+export interface DbInstance {
+  exec(sql: string): void;
+  pragma(pragmaSql: string): any;
+  prepare(sql: string): DbStatement;
+  transaction<T extends (...args: any[]) => any>(fn: T): T;
 }
 
-const dbPath = path.join(dataDir, 'adaptato.db');
-export const db = new Database(dbPath);
+function canWriteDir(dirPath: string): boolean {
+  try {
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true });
+    }
+    fs.accessSync(dirPath, fs.constants.W_OK);
+    const probe = path.join(dirPath, `.write_probe_${process.pid}_${Date.now()}`);
+    fs.writeFileSync(probe, 'ok');
+    fs.unlinkSync(probe);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+const isVercelEnv = Boolean(process.env.VERCEL || process.env.VERCEL_ENV || process.env.NOW_REGION);
+const localDataDir = path.resolve(process.cwd(), 'data');
+const localUploadsDir = path.resolve(process.cwd(), 'uploads');
+const useEphemeralStorage = isVercelEnv || !canWriteDir(localDataDir);
+
+export const IS_EPHEMERAL_STORAGE = useEphemeralStorage;
+export const DATA_DIR = useEphemeralStorage
+  ? path.join(os.tmpdir(), 'adaptato-data')
+  : localDataDir;
+export const UPLOADS_DIR = useEphemeralStorage
+  ? path.join(os.tmpdir(), 'adaptato-uploads')
+  : localUploadsDir;
+
+for (const dir of [DATA_DIR, UPLOADS_DIR]) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+const dbPath = path.join(DATA_DIR, 'adaptato.db');
+
+// On serverless cold starts, seed from bundled read-only DB if available
+if (useEphemeralStorage && !fs.existsSync(dbPath)) {
+  const bundledDb = path.join(localDataDir, 'adaptato.db');
+  if (fs.existsSync(bundledDb)) {
+    try {
+      fs.copyFileSync(bundledDb, dbPath);
+    } catch {
+      // Ignore copy failure; initializeDatabase + seedInitialData will create fresh tables
+    }
+  }
+}
+
+function createDatabaseConnection(): DbInstance {
+  try {
+    const BetterSqlite3 = require('better-sqlite3');
+    const instance = new BetterSqlite3(dbPath);
+    if (!useEphemeralStorage) {
+      instance.pragma('journal_mode = WAL');
+    }
+    instance.pragma('foreign_keys = ON');
+    return instance as DbInstance;
+  } catch (betterErr) {
+    // Fallback to Node 22 built-in node:sqlite if native better-sqlite3 binary is unavailable on serverless
+    try {
+      const { DatabaseSync } = require('node:sqlite');
+      const syncDb = new DatabaseSync(dbPath);
+      syncDb.exec('PRAGMA foreign_keys = ON;');
+
+      const wrapper: DbInstance = {
+        exec(sql: string) {
+          syncDb.exec(sql);
+        },
+        pragma(pragmaSql: string) {
+          try {
+            syncDb.exec(`PRAGMA ${pragmaSql};`);
+          } catch {
+            // ignore unsupported pragmas
+          }
+        },
+        prepare(sql: string): DbStatement {
+          const stmt = syncDb.prepare(sql);
+          return {
+            run(...params: any[]) {
+              const res = stmt.run(...params);
+              return {
+                changes: res?.changes ?? 0,
+                lastInsertRowid: Number(res?.lastInsertRowid ?? 0),
+              };
+            },
+            get(...params: any[]) {
+              return stmt.get(...params);
+            },
+            all(...params: any[]) {
+              return stmt.all(...params);
+            },
+          };
+        },
+        transaction<T extends (...args: any[]) => any>(fn: T): T {
+          return ((...args: any[]) => {
+            syncDb.exec('BEGIN IMMEDIATE;');
+            try {
+              const result = fn(...args);
+              syncDb.exec('COMMIT;');
+              return result;
+            } catch (err) {
+              try {
+                syncDb.exec('ROLLBACK;');
+              } catch {
+                // ignore rollback failure
+              }
+              throw err;
+            }
+          }) as T;
+        },
+      };
+
+      return wrapper;
+    } catch (nodeSqliteErr) {
+      console.error('Failed to open SQLite with better-sqlite3 and node:sqlite:', betterErr, nodeSqliteErr);
+      throw betterErr;
+    }
+  }
+}
+
+export const db: DbInstance = createDatabaseConnection();
 
 export function initializeDatabase(): void {
   db.exec(`

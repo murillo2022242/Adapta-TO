@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Express, Request, Response } from 'express';
-import { db } from './db.ts';
+import { IS_EPHEMERAL_STORAGE, UPLOADS_DIR, db } from './db.ts';
 import {
   createEditorUnlockToken,
   createSessionToken,
@@ -464,9 +464,11 @@ export function registerRoutes(app: Express): void {
     }
 
     const token = createSessionToken(user.id, user.role);
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('adaptato_session', token, {
       httpOnly: true,
       sameSite: 'lax',
+      secure: isSecure,
       path: '/',
       maxAge: 1000 * 60 * 60 * 12,
     });
@@ -485,8 +487,9 @@ export function registerRoutes(app: Express): void {
     });
   });
 
-  app.post('/api/auth/logout', (_req: Request, res: Response) => {
-    res.clearCookie('adaptato_session', { path: '/' });
+  app.post('/api/auth/logout', (req: Request, res: Response) => {
+    const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
+    res.clearCookie('adaptato_session', { path: '/', secure: isSecure, sameSite: 'lax' });
     res.json({ ok: true });
   });
 
@@ -1083,9 +1086,14 @@ export function registerRoutes(app: Express): void {
       return;
     }
 
+    if (IS_EPHEMERAL_STORAGE) {
+      res.status(201).json({ url: dataUrl });
+      return;
+    }
+
     const safeBase = slugify(String(filename || 'foto').replace(/\.[^.]+$/, '')) || 'foto';
     const outName = `${safeBase}-${Date.now()}.${ext}`;
-    const outPath = path.resolve(process.cwd(), 'uploads', outName);
+    const outPath = path.join(UPLOADS_DIR, outName);
     fs.writeFileSync(outPath, buffer);
 
     res.status(201).json({ url: `/uploads/${outName}` });
