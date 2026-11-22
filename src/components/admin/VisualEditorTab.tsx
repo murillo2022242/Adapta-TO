@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   ArrowRight,
-  Calendar,
   CheckCircle2,
   FileText,
   Globe,
@@ -19,30 +18,45 @@ import {
 } from 'lucide-react';
 import { useClinic } from '../../context/ClinicContext.tsx';
 import { ResilientImage } from '../ClinicIcon.tsx';
+import { adminFetch } from '../../utils/adminAuthFetch.ts';
 import type { SiteSettings, ThemeColors } from '../../types.ts';
 
 interface VisualEditorTabProps {
   settings: SiteSettings;
   onSaved: () => Promise<void>;
-  onNavigateSection?: (tab: 'agenda' | 'catalog' | 'ai' | 'users') => void;
+  onNavigateSection?: (tab: 'catalog' | 'ai' | 'users') => void;
 }
 
 type EditorSubTab = 'colors' | 'photos' | 'home' | 'pages' | 'contact';
 
 const COLOR_FIELDS: Array<{ key: keyof ThemeColors; label: string; hint: string }> = [
-  { key: 'forest', label: 'Cor Principal (Títulos & Botões)', hint: 'Títulos, botões primários e destaques' },
-  { key: 'sage', label: 'Cor Secundária (Acolhimento)', hint: 'Bordas suaves e realces sutis' },
-  { key: 'beige', label: 'Fundo das Páginas', hint: 'Fundo principal das seções alternadas' },
-  { key: 'white', label: 'Fundo de Cards & Cabeçalho', hint: 'Cartões, menu superior e formulários' },
+  { key: 'forest', label: 'Cor Principal (Botões & Destaques)', hint: 'Botões primários, links ativos e realces' },
+  { key: 'sage', label: 'Cor Secundária (Realces Suaves)', hint: 'Bordas e fundos delicados em destaque' },
+  { key: 'beige', label: 'Fundo Suave das Seções', hint: 'Fundo alternado das seções e formulários' },
+  { key: 'white', label: 'Fundo Principal & Cards', hint: 'Cartões, menu superior e fundo branco' },
   { key: 'graySoft', label: 'Linhas & Divisores', hint: 'Bordas de cards e separadores' },
   { key: 'taupe', label: 'Cor de Apoio (Subtítulos)', hint: 'Rótulos curtos e detalhes sutis' },
-  { key: 'ink', label: 'Texto Principal', hint: 'Cor padrão de leitura dos parágrafos' },
+  { key: 'ink', label: 'Títulos & Texto Principal', hint: 'Cor padrão dos títulos e parágrafos' },
   { key: 'inkMuted', label: 'Texto Secundário', hint: 'Descrições, legendas e notas' },
 ];
 
 const THEME_PRESETS: Array<{ name: string; description: string; theme: ThemeColors }> = [
   {
-    name: 'adaptaTO Clássico',
+    name: 'Espaço Adapta T.O',
+    description: 'Coral-rosé acolhedor, azul-marinho e branco limpo',
+    theme: {
+      sage: '#F3D0DC',
+      forest: '#E04F6D',
+      beige: '#F8FAFC',
+      white: '#FFFFFF',
+      graySoft: '#E2E8F0',
+      taupe: '#64748B',
+      ink: '#182235',
+      inkMuted: '#4B5563',
+    },
+  },
+  {
+    name: 'Sálvia & Bege',
     description: 'Verde-sálvia, verde-escuro e bege sereno',
     theme: {
       sage: '#A8BDA8',
@@ -53,20 +67,6 @@ const THEME_PRESETS: Array<{ name: string; description: string; theme: ThemeColo
       taupe: '#817568',
       ink: '#243028',
       inkMuted: '#56524D',
-    },
-  },
-  {
-    name: 'Areia & Oliveira',
-    description: 'Tons terrosos acolhedores e calorosos',
-    theme: {
-      sage: '#B9C4AD',
-      forest: '#4A593D',
-      beige: '#F5F0E6',
-      white: '#FFFDF9',
-      graySoft: '#E5DFD5',
-      taupe: '#8A745E',
-      ink: '#282B22',
-      inkMuted: '#5F594F',
     },
   },
   {
@@ -97,10 +97,150 @@ const THEME_PRESETS: Array<{ name: string; description: string; theme: ThemeColo
       inkMuted: '#5A5859',
     },
   },
+  {
+    name: 'Oceano Sereno',
+    description: 'Azul-profundo calmante e névoa gelo',
+    theme: {
+      sage: '#C8DCE8',
+      forest: '#245B7A',
+      beige: '#F5F9FC',
+      white: '#FFFFFF',
+      graySoft: '#DCE6EE',
+      taupe: '#5E7487',
+      ink: '#142433',
+      inkMuted: '#42586B',
+    },
+  },
+  {
+    name: 'Eucalipto & Linho',
+    description: 'Verde-eucalipto fresco e linho claro',
+    theme: {
+      sage: '#C4DFD3',
+      forest: '#2F6B55',
+      beige: '#F7F8F5',
+      white: '#FFFFFF',
+      graySoft: '#DFE5DF',
+      taupe: '#64786E',
+      ink: '#1A2B24',
+      inkMuted: '#465A51',
+    },
+  },
+  {
+    name: 'Ameixa Acolhedora',
+    description: 'Ameixa delicada com lilás suave',
+    theme: {
+      sage: '#E5D1DF',
+      forest: '#7A3E65',
+      beige: '#FAF7F9',
+      white: '#FFFFFF',
+      graySoft: '#EAE1E7',
+      taupe: '#7D6876',
+      ink: '#281824',
+      inkMuted: '#5B4755',
+    },
+  },
+  {
+    name: 'Terracota Suave',
+    description: 'Terracota terrosa e pêssego leve',
+    theme: {
+      sage: '#F0D6CE',
+      forest: '#9E4A36',
+      beige: '#FBF8F6',
+      white: '#FFFFFF',
+      graySoft: '#ECE2DD',
+      taupe: '#856B63',
+      ink: '#2B1C18',
+      inkMuted: '#5F4B45',
+    },
+  },
+  {
+    name: 'Índigo & Nuvem',
+    description: 'Índigo sereno sobre fundo nuvem',
+    theme: {
+      sage: '#D3DBF0',
+      forest: '#3D4E8A',
+      beige: '#F6F8FC',
+      white: '#FFFFFF',
+      graySoft: '#E0E5F0',
+      taupe: '#636D87',
+      ink: '#171E36',
+      inkMuted: '#46506B',
+    },
+  },
+  {
+    name: 'Mel & Oliva',
+    description: 'Oliva natural e pistache suave',
+    theme: {
+      sage: '#DCE4C8',
+      forest: '#566634',
+      beige: '#F9FAF5',
+      white: '#FFFFFF',
+      graySoft: '#E4E7DA',
+      taupe: '#727A5E',
+      ink: '#222816',
+      inkMuted: '#505842',
+    },
+  },
+  {
+    name: 'Rosa Chá & Grafite',
+    description: 'Rosa antigo elegante e neutro limpo',
+    theme: {
+      sage: '#F2D8DF',
+      forest: '#A84860',
+      beige: '#FAF8F9',
+      white: '#FFFFFF',
+      graySoft: '#EAE3E5',
+      taupe: '#786D71',
+      ink: '#21242B',
+      inkMuted: '#53565E',
+    },
+  },
+  {
+    name: 'Petróleo & Areia',
+    description: 'Azul-petróleo equilibrado e areia fria',
+    theme: {
+      sage: '#C5E0E2',
+      forest: '#1F636B',
+      beige: '#F5F9F9',
+      white: '#FFFFFF',
+      graySoft: '#DCE6E7',
+      taupe: '#5D7679',
+      ink: '#14292C',
+      inkMuted: '#415A5E',
+    },
+  },
+  {
+    name: 'Cacau & Baunilha',
+    description: 'Cacau acolhedor e creme amêndoa',
+    theme: {
+      sage: '#E8DBD2',
+      forest: '#6B4E3D',
+      beige: '#FAF8F5',
+      white: '#FFFFFF',
+      graySoft: '#EAE2DC',
+      taupe: '#7F6E63',
+      ink: '#261D18',
+      inkMuted: '#5A4D45',
+    },
+  },
+  {
+    name: 'Cobalto & Pérola',
+    description: 'Azul-cobalto nítido e celeste claro',
+    theme: {
+      sage: '#D0DDF2',
+      forest: '#28529E',
+      beige: '#F7F9FC',
+      white: '#FFFFFF',
+      graySoft: '#DFE6F2',
+      taupe: '#616E85',
+      ink: '#162238',
+      inkMuted: '#46536B',
+    },
+  },
 ];
 
 const IMAGE_FIELDS: Array<{
-  key: keyof SiteSettings['images'];
+  key: 'heroImage' | 'aboutSpaceImage' | 'aboutSessionImage' | 'specialtiesBannerImage';
   label: string;
   description: string;
 }> = [
@@ -161,7 +301,7 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
     setUnlockError(null);
     setUnlocking(true);
     try {
-      const res = await fetch('/api/auth/verify-editor-password', {
+      const res = await adminFetch('/api/auth/verify-editor-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password: editorPassword }),
@@ -200,7 +340,7 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
     const reader = new FileReader();
     reader.onload = async () => {
       try {
-        const res = await fetch('/api/admin/upload-image', {
+        const res = await adminFetch('/api/admin/upload-image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -229,7 +369,7 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
     setSaveMessage(null);
     setSaveError(null);
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await adminFetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -267,7 +407,7 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
     setSaveMessage(null);
     setSaveError(null);
     try {
-      const res = await fetch('/api/admin/settings', {
+      const res = await adminFetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, contact }),
@@ -289,7 +429,7 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
   const handleChangeEditorPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setEdPassMsg(null);
-    const res = await fetch('/api/admin/editor-password', {
+    const res = await adminFetch('/api/admin/editor-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -389,16 +529,15 @@ export function VisualEditorTab({ settings, onSaved, onNavigateSection }: Visual
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--color-gray-soft)] bg-[var(--color-beige)]/50 text-xs font-medium text-[var(--color-forest)] hover:bg-[var(--color-beige)] cursor-pointer"
               >
                 <Stethoscope className="w-3.5 h-3.5" />
-                <span>Editar Profissionais e Especialidades</span>
+                <span>Profissionais e Especialidades</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
               <button
                 type="button"
-                onClick={() => onNavigateSection('agenda')}
+                onClick={() => onNavigateSection('users')}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[var(--color-gray-soft)] bg-[var(--color-beige)]/50 text-xs font-medium text-[var(--color-forest)] hover:bg-[var(--color-beige)] cursor-pointer"
               >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>Editar Agendamentos e Horários</span>
+                <span>Mensagens & Contatos</span>
                 <ArrowRight className="w-3 h-3" />
               </button>
             </div>

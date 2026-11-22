@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ArrowLeft,
   Bot,
-  Calendar,
   Lock,
   LogOut,
   Palette,
@@ -10,26 +9,23 @@ import {
   Stethoscope,
 } from 'lucide-react';
 import { useClinic } from '../context/ClinicContext.tsx';
-import { AgendaTab } from '../components/admin/AgendaTab.tsx';
 import { VisualEditorTab } from '../components/admin/VisualEditorTab.tsx';
 import {
   AiAndFaqTab,
   ContactsAndUsersTab,
   ProfessionalsAndSpecialtiesTab,
 } from '../components/admin/CatalogAndAiTabs.tsx';
+import { adminFetch, setAdminAuthToken } from '../utils/adminAuthFetch.ts';
 import type {
-  Appointment,
   AuthUser,
-  BlockedDate,
   ContactMessage,
-  DashboardStats,
   FaqItem,
   KnowledgeItem,
   Professional,
   Specialty,
 } from '../types.ts';
 
-type AdminTab = 'agenda' | 'visual' | 'catalog' | 'ai' | 'users';
+type AdminTab = 'visual' | 'catalog' | 'ai' | 'users';
 
 export function AdminPage() {
   const { data, navigate, refreshData } = useClinic();
@@ -41,52 +37,45 @@ export function AdminPage() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loggingIn, setLoggingIn] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<AdminTab>('agenda');
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [activeTab, setActiveTab] = useState<AdminTab>('visual');
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
-  const [blocks, setBlocks] = useState<BlockedDate[]>([]);
   const [faqs, setFaqs] = useState<FaqItem[]>([]);
   const [knowledge, setKnowledge] = useState<KnowledgeItem[]>([]);
   const [contacts, setContacts] = useState<ContactMessage[]>([]);
   const [users, setUsers] = useState<AuthUser[]>([]);
 
-  const loadAdminData = useCallback(
-    async (currentUser: AuthUser) => {
-      const [dashRes, apptRes, profRes, blockRes, specRes] = await Promise.all([
-        fetch('/api/admin/dashboard'),
-        fetch('/api/admin/appointments'),
-        fetch('/api/admin/professionals'),
-        fetch('/api/admin/blocks'),
-        fetch('/api/admin/specialties'),
+  const loadAdminData = useCallback(async (currentUser: AuthUser) => {
+    const [profRes, specRes] = await Promise.all([
+      adminFetch('/api/admin/professionals'),
+      adminFetch('/api/admin/specialties'),
+    ]);
+
+    if (profRes.ok) setProfessionals((await profRes.json()).professionals || []);
+    if (specRes.ok) setSpecialties((await specRes.json()).specialties || []);
+
+    if (currentUser.role === 'admin') {
+      const [faqRes, kbRes, contactRes, userRes] = await Promise.all([
+        adminFetch('/api/admin/faqs'),
+        adminFetch('/api/admin/knowledge'),
+        adminFetch('/api/admin/contacts'),
+        adminFetch('/api/admin/users'),
       ]);
-
-      if (dashRes.ok) setStats(await dashRes.json());
-      if (apptRes.ok) setAppointments((await apptRes.json()).appointments || []);
-      if (profRes.ok) setProfessionals((await profRes.json()).professionals || []);
-      if (blockRes.ok) setBlocks((await blockRes.json()).blocks || []);
-      if (specRes.ok) setSpecialties((await specRes.json()).specialties || []);
-
-      if (currentUser.role === 'admin') {
-        const [faqRes, kbRes, contactRes, userRes] = await Promise.all([
-          fetch('/api/admin/faqs'),
-          fetch('/api/admin/knowledge'),
-          fetch('/api/admin/contacts'),
-          fetch('/api/admin/users'),
-        ]);
-        if (faqRes.ok) setFaqs((await faqRes.json()).faqs || []);
-        if (kbRes.ok) setKnowledge((await kbRes.json()).items || []);
-        if (contactRes.ok) setContacts((await contactRes.json()).messages || []);
-        if (userRes.ok) setUsers((await userRes.json()).users || []);
-      }
-    },
-    []
-  );
+      if (faqRes.ok) setFaqs((await faqRes.json()).faqs || []);
+      if (kbRes.ok) setKnowledge((await kbRes.json()).items || []);
+      if (contactRes.ok) setContacts((await contactRes.json()).messages || []);
+      if (userRes.ok) setUsers((await userRes.json()).users || []);
+    } else {
+      setActiveTab('users');
+    }
+  }, []);
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then((res) => (res.ok ? res.json() : null))
+    adminFetch('/api/auth/me')
+      .then((res) => {
+        if (res.status === 401) setAdminAuthToken(null);
+        return res.ok ? res.json() : null;
+      })
       .then((json) => {
         if (json?.user) {
           setUser(json.user);
@@ -101,7 +90,7 @@ export function AdminPage() {
     setLoginError(null);
     setLoggingIn(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await adminFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -111,8 +100,12 @@ export function AdminPage() {
         setLoginError(json.error || 'Falha na autenticação.');
         return;
       }
+      if (json.token) {
+        setAdminAuthToken(json.token);
+      }
       setUser(json.user);
       setPassword('');
+      setActiveTab(json.user.role === 'admin' ? 'visual' : 'users');
       await loadAdminData(json.user);
     } catch {
       setLoginError('Erro de conexão ao autenticar.');
@@ -122,9 +115,10 @@ export function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
+    await adminFetch('/api/auth/logout', { method: 'POST' });
+    setAdminAuthToken(null);
     setUser(null);
-    setActiveTab('agenda');
+    setActiveTab('visual');
   };
 
   const handleRefreshAll = async () => {
@@ -151,10 +145,10 @@ export function AdminPage() {
               <Lock className="w-5 h-5" />
             </div>
             <h1 className="text-2xl font-semibold text-[var(--color-forest)]">
-              Painel Administrativo adaptaTO
+              Painel Administrativo Espaço Adapta T.O
             </h1>
             <p className="text-sm text-[var(--color-ink-muted)] mt-1">
-              Área protegida para administração e profissionais da clínica.
+              Área protegida para administração do site.
             </p>
           </div>
 
@@ -218,12 +212,24 @@ export function AdminPage() {
     );
   }
 
-  const tabs: Array<{ id: AdminTab; label: string; icon: React.ComponentType<{ className?: string }>; adminOnly?: boolean }> = [
-    { id: 'agenda', label: 'Agenda & Solicitações', icon: Calendar },
+  const unreadContactsCount = contacts.filter((c) => c.status === 'novo').length;
+
+  const tabs: Array<{
+    id: AdminTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    adminOnly?: boolean;
+    badge?: number;
+  }> = [
     { id: 'visual', label: 'Modificar Site', icon: Palette, adminOnly: true },
     { id: 'catalog', label: 'Profissionais & Especialidades', icon: Stethoscope, adminOnly: true },
     { id: 'ai', label: 'IA, Base & FAQ', icon: Bot, adminOnly: true },
-    { id: 'users', label: user.role === 'admin' ? 'Contatos & Usuários' : 'Minha Senha', icon: Shield },
+    {
+      id: 'users',
+      label: user.role === 'admin' ? 'Contatos & Usuários' : 'Minha Senha',
+      icon: Shield,
+      badge: user.role === 'admin' && unreadContactsCount > 0 ? unreadContactsCount : undefined,
+    },
   ];
 
   const visibleTabs = tabs.filter((t) => !t.adminOnly || user.role === 'admin');
@@ -234,7 +240,7 @@ export function AdminPage() {
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-xs font-medium text-[var(--color-taupe)]">
-              {user.role === 'admin' ? 'Administrador Geral' : 'Acesso Profissional'} · {user.email}
+              {user.role === 'admin' ? 'Administrador Geral' : 'Acesso Restrito'} · {user.email}
             </p>
             <h1 className="text-xl sm:text-2xl font-semibold text-[var(--color-forest)]">
               Olá, {user.name}
@@ -259,7 +265,7 @@ export function AdminPage() {
           </div>
         </div>
 
-        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex items-center gap-2 overflow-x-auto pb-3">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6 flex flex-wrap items-center gap-2 pb-3.5">
           {visibleTabs.map((t) => {
             const Icon = t.icon;
             const active = activeTab === t.id;
@@ -268,7 +274,7 @@ export function AdminPage() {
                 key={t.id}
                 type="button"
                 onClick={() => setActiveTab(t.id)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer ${
                   active
                     ? 'bg-[var(--color-forest)] text-white'
                     : 'bg-[var(--color-beige)] text-[var(--color-ink-muted)] hover:text-[var(--color-forest)]'
@@ -276,6 +282,17 @@ export function AdminPage() {
               >
                 <Icon className="w-3.5 h-3.5" />
                 <span>{t.label}</span>
+                {t.badge !== undefined && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded-md text-[10px] font-bold tabular-nums ${
+                      active
+                        ? 'bg-white/20 text-white'
+                        : 'bg-[var(--color-forest)] text-white'
+                    }`}
+                  >
+                    {t.badge}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -283,18 +300,6 @@ export function AdminPage() {
       </div>
 
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-8">
-        {activeTab === 'agenda' && (
-          <AgendaTab
-            user={user}
-            stats={stats}
-            appointments={appointments}
-            professionals={professionals}
-            specialties={specialties}
-            blocks={blocks}
-            onRefresh={handleRefreshAll}
-          />
-        )}
-
         {activeTab === 'visual' && user.role === 'admin' && data && (
           <VisualEditorTab
             settings={data.settings}

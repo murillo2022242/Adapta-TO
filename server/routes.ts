@@ -14,8 +14,13 @@ import {
   type AuthenticatedRequest,
 } from './auth.ts';
 import { DEFAULT_SITE_SETTINGS, getSiteSettings } from './seed.ts';
-import { getAvailableSlotsForDate, getClinicNowParts, getMonthAvailability } from './availability.ts';
-import { checkAiRateLimit, generateAssistantReply } from './ai.ts';
+import {
+  getAvailableSlotsForDate,
+  getClinicNowParts,
+  getLiveWeekSchedule,
+  getMonthAvailability,
+} from './availability.ts';
+import { checkAiRateLimit, generateAssistantReply, streamAssistantReply } from './ai.ts';
 import type { AppointmentStatus, WeeklySchedule } from '../src/types.ts';
 
 function slugify(input: string): string {
@@ -25,6 +30,50 @@ function slugify(input: string): string {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
+}
+
+function parsePositiveInt(raw: unknown): number | null {
+  const str = String(raw ?? '').trim();
+  if (!/^\d+$/.test(str)) return null;
+  const num = Number(str);
+  return Number.isSafeInteger(num) && num > 0 ? num : null;
+}
+
+const SAFE_IMAGE_URL_RE = /^(\/(src\/)?assets\/|\/uploads\/|https?:\/\/|data:image\/(png|jpeg|jpg|webp);base64,)/i;
+
+function sanitizeImageUrl(val: unknown, fallback = ''): string {
+  const trimmed = String(val ?? '').trim();
+  if (!trimmed) return '';
+  return SAFE_IMAGE_URL_RE.test(trimmed) ? trimmed : fallback;
+}
+
+function sanitizeExternalUrl(val: unknown, fallback = ''): string {
+  const trimmed = String(val ?? '').trim();
+  if (!trimmed) return '';
+  if (/^(javascript|data|vbscript):/i.test(trimmed)) return fallback;
+  const candidate = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const parsed = new URL(candidate);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const loginRateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function checkLoginRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginRateBuckets.get(ip);
+  if (!entry || now > entry.resetAt) {
+    loginRateBuckets.set(ip, { count: 1, resetAt: now + 5 * 60_000 });
+    return true;
+  }
+  if (entry.count >= 25) {
+    return false;
+  }
+  entry.count += 1;
+  return true;
 }
 
 function logAudit(userId: number | null, action: string, details = ''): void {
@@ -106,6 +155,7 @@ function mapAppointmentRow(row: any) {
 export function registerRoutes(app: Express): void {
   // === PUBLIC BOOTSTRAP ===
   app.get('/api/public/bootstrap', (_req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const settings = getSiteSettings();
     const specialties = db
       .prepare('SELECT * FROM specialties WHERE active = 1 ORDER BY sort_order ASC, id ASC')
@@ -144,6 +194,7 @@ export function registerRoutes(app: Express): void {
 
   // === AVAILABILITY & PUBLIC BOOKING ===
   app.get('/api/appointments/availability', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const professionalId = Number(req.query.professionalId);
     const date = String(req.query.date || '');
     if (!professionalId || !date) {
@@ -151,11 +202,18 @@ export function registerRoutes(app: Express): void {
       return;
     }
     const settings = getSiteSettings();
-    const result = getAvailableSlotsForDate(professionalId, date, settings.contact.timezone);
+    const result = getAvailableSlotsForDate(
+      professionalId,
+      date,
+      settings.contact.timezone,
+      undefined,
+      settings.contact.address
+    );
     res.json(result);
   });
 
   app.get('/api/appointments/month-availability', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const professionalId = Number(req.query.professionalId);
     const month = String(req.query.month || '');
     if (!professionalId || !month) {
@@ -163,8 +221,59 @@ export function registerRoutes(app: Express): void {
       return;
     }
     const settings = getSiteSettings();
-    const days = getMonthAvailability(professionalId, month, settings.contact.timezone);
+    const days = getMonthAvailability(
+      professionalId,
+      month,
+      settings.contact.timezone,
+      settings.contact.address
+    );
     res.json({ days });
+  });
+
+  app.get('/api/appointments/live-schedule', (req: Request, res: Response) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    const professionalIdParam = req.query.professionalId;
+    const startDate = req.query.startDate ? String(req.query.startDate).trim() : undefined;
+    const settings = getSiteSettings();
+
+    const activeProfs = db
+      .prepare('SELECT id, name, specialty_summary, crfa, photo_url, working_hours_json FROM professionals WHERE active = 1 ORDER BY id ASC')
+      .all() as Array<{
+      id: number;
+      name: string;
+      specialty_summary: string;
+      crfa: string;
+      photo_url: string;
+      working_hours_json: string;
+    }>;
+
+    const targetId =
+      professionalIdParam && professionalIdParam !== 'all'
+        ? Number(professionalIdParam)
+        : activeProfs[0]?.id || 0;
+
+    if (!targetId) {
+      res.json({
+        updatedAt: new Date().toISOString(),
+        clinicAddress: settings.contact.address,
+        days: [],
+      });
+      return;
+    }
+
+    const days = getLiveWeekSchedule(
+      targetId,
+      settings.contact.timezone,
+      settings.contact.address,
+      startDate
+    );
+
+    res.json({
+      updatedAt: new Date().toISOString(),
+      clinicAddress: settings.contact.address,
+      professionalId: targetId,
+      days,
+    });
   });
 
   app.post('/api/appointments', (req: Request, res: Response) => {
@@ -438,13 +547,86 @@ export function registerRoutes(app: Express): void {
       console.error('AI assistant error:', error);
       res.status(500).json({
         error:
-          'Ocorreu uma instabilidade temporária no atendimento virtual. Recomendamos conversar diretamente com nossa equipe pelo WhatsApp.',
+          'Ocorreu uma instabilidade temporária no atendimento virtual. Por favor, tente novamente em instantes.',
       });
+    }
+  });
+
+  app.post('/api/ai/chat/stream', async (req: Request, res: Response) => {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkAiRateLimit(clientIp)) {
+      res.status(429).json({
+        error: 'Muitas mensagens em sequência. Aguarde um instante para continuar.',
+      });
+      return;
+    }
+
+    const { message, history } = req.body || {};
+    if (!message || typeof message !== 'string') {
+      res.status(400).json({ error: 'Envie uma pergunta válida.' });
+      return;
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders?.();
+    res.write(': connected\n\n');
+
+    let clientDisconnected = false;
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        clientDisconnected = true;
+      }
+    });
+
+    const sendEvent = (payload: Record<string, unknown>) => {
+      if (clientDisconnected || res.writableEnded) return;
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    try {
+      const result = await streamAssistantReply(
+        message,
+        Array.isArray(history) ? history : [],
+        (chunkText) => {
+          sendEvent({ type: 'chunk', text: chunkText });
+        }
+      );
+
+      if (result.unavailable) {
+        sendEvent({ type: 'error', error: result.reply, unavailable: true });
+      } else {
+        sendEvent({
+          type: 'done',
+          reply: result.reply,
+          sources: result.sources || [],
+        });
+      }
+    } catch (error) {
+      console.error('AI streaming error:', error);
+      sendEvent({
+        type: 'error',
+        error:
+          'Ocorreu uma instabilidade temporária ao gerar a resposta. Tente novamente em instantes.',
+      });
+    } finally {
+      if (!res.writableEnded) {
+        res.end();
+      }
     }
   });
 
   // === AUTHENTICATION ===
   app.post('/api/auth/login', (req: Request, res: Response) => {
+    const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+    if (!checkLoginRateLimit(clientIp)) {
+      res.status(429).json({
+        error: 'Muitas tentativas de login. Aguarde alguns minutos e tente novamente.',
+      });
+      return;
+    }
+
     const { email, password } = req.body || {};
     const cleanEmail = String(email || '').trim().toLowerCase();
     const rawPassword = String(password || '');
@@ -467,7 +649,7 @@ export function registerRoutes(app: Express): void {
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
     res.cookie('adaptato_session', token, {
       httpOnly: true,
-      sameSite: 'lax',
+      sameSite: isSecure ? 'none' : 'lax',
       secure: isSecure,
       path: '/',
       maxAge: 1000 * 60 * 60 * 12,
@@ -489,7 +671,11 @@ export function registerRoutes(app: Express): void {
 
   app.post('/api/auth/logout', (req: Request, res: Response) => {
     const isSecure = req.secure || req.headers['x-forwarded-proto'] === 'https';
-    res.clearCookie('adaptato_session', { path: '/', secure: isSecure, sameSite: 'lax' });
+    res.clearCookie('adaptato_session', {
+      path: '/',
+      secure: isSecure,
+      sameSite: isSecure ? 'none' : 'lax',
+    });
     res.json({ ok: true });
   });
 
@@ -769,7 +955,11 @@ export function registerRoutes(app: Express): void {
 
   app.patch('/api/admin/appointments/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const user = req.authUser!;
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const existing = db.prepare('SELECT * FROM appointments WHERE id = ?').get(id) as any;
     if (!existing) {
       res.status(404).json({ error: 'Agendamento não encontrado.' });
@@ -827,6 +1017,10 @@ export function registerRoutes(app: Express): void {
     const validStatuses = ['pendente', 'confirmado', 'cancelado', 'reagendado'];
     if (!validStatuses.includes(nextStatus)) {
       res.status(400).json({ error: 'Status de agendamento inválido.' });
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nextDate) || !/^\d{2}:\d{2}$/.test(nextTime)) {
+      res.status(400).json({ error: 'Data ou horário inválidos.' });
       return;
     }
     if (!nextPatientName || nextPatientName.length < 2) {
@@ -911,7 +1105,11 @@ export function registerRoutes(app: Express): void {
   });
 
   app.delete('/api/admin/appointments/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const existing = db.prepare('SELECT id FROM appointments WHERE id = ?').get(id);
     if (!existing) {
       res.status(404).json({ error: 'Agendamento não encontrado.' });
@@ -991,7 +1189,11 @@ export function registerRoutes(app: Express): void {
 
   app.delete('/api/admin/blocks/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const user = req.authUser!;
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const block = db.prepare('SELECT * FROM blocked_dates WHERE id = ?').get(id) as any;
     if (!block) {
       res.status(404).json({ error: 'Bloqueio não encontrado.' });
@@ -1027,28 +1229,94 @@ export function registerRoutes(app: Express): void {
 
     if (resetTheme) {
       upsert.run('theme', JSON.stringify(DEFAULT_SITE_SETTINGS.theme));
-    } else if (theme) {
-      const mergedTheme = { ...current.theme, ...theme };
-      upsert.run('theme', JSON.stringify(mergedTheme));
+    } else if (theme && typeof theme === 'object') {
+      const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+      const sanitizedTheme: Record<string, string> = { ...current.theme };
+      for (const key of Object.keys(DEFAULT_SITE_SETTINGS.theme) as Array<keyof typeof DEFAULT_SITE_SETTINGS.theme>) {
+        const candidate = theme[key];
+        if (typeof candidate === 'string' && HEX_RE.test(candidate.trim())) {
+          sanitizedTheme[key] = candidate.trim();
+        }
+      }
+      upsert.run('theme', JSON.stringify(sanitizedTheme));
     }
 
-    if (images) {
-      const mergedImages = { ...current.images, ...images };
+    if (images && typeof images === 'object') {
+      const mergedImages = {
+        heroImage:
+          images.heroImage !== undefined
+            ? sanitizeImageUrl(images.heroImage, current.images.heroImage)
+            : current.images.heroImage,
+        aboutSpaceImage:
+          images.aboutSpaceImage !== undefined
+            ? sanitizeImageUrl(images.aboutSpaceImage, current.images.aboutSpaceImage)
+            : current.images.aboutSpaceImage,
+        aboutSessionImage:
+          images.aboutSessionImage !== undefined
+            ? sanitizeImageUrl(images.aboutSessionImage, current.images.aboutSessionImage)
+            : current.images.aboutSessionImage,
+        specialtiesBannerImage:
+          images.specialtiesBannerImage !== undefined
+            ? sanitizeImageUrl(images.specialtiesBannerImage, current.images.specialtiesBannerImage)
+            : current.images.specialtiesBannerImage,
+        galleryImages: Array.isArray(images.galleryImages)
+          ? images.galleryImages
+              .map((u: unknown) => sanitizeImageUrl(u, ''))
+              .filter(Boolean)
+              .slice(0, 20)
+          : current.images.galleryImages,
+      };
       upsert.run('images', JSON.stringify(mergedImages));
     }
-    if (content) {
-      const mergedContent = { ...current.content, ...content };
+    if (content && typeof content === 'object') {
+      const sanitizedDifferentials = Array.isArray(content.differentials)
+        ? content.differentials
+            .filter((d: any) => d && typeof d === 'object')
+            .map((d: any) => ({
+              title: String(d.title ?? '').trim().slice(0, 140),
+              description: String(d.description ?? '').trim().slice(0, 600),
+            }))
+            .filter((d: { title: string; description: string }) => d.title || d.description)
+        : null;
+      const mergedContent = {
+        ...current.content,
+        ...content,
+        differentials:
+          sanitizedDifferentials && sanitizedDifferentials.length > 0
+            ? sanitizedDifferentials
+            : current.content.differentials,
+      };
       upsert.run('content', JSON.stringify(mergedContent));
     }
-    if (contact) {
+    if (contact && typeof contact === 'object') {
       const mergedContact = {
         ...current.contact,
         ...contact,
         whatsapp: String(contact.whatsapp ?? current.contact.whatsapp).replace(/\D/g, ''),
+        instagram:
+          contact.instagram !== undefined
+            ? sanitizeExternalUrl(contact.instagram, current.contact.instagram)
+            : current.contact.instagram,
+        facebook:
+          contact.facebook !== undefined
+            ? sanitizeExternalUrl(contact.facebook, current.contact.facebook)
+            : current.contact.facebook,
+        linkedin:
+          contact.linkedin !== undefined
+            ? sanitizeExternalUrl(contact.linkedin, current.contact.linkedin)
+            : current.contact.linkedin,
+        youtube:
+          contact.youtube !== undefined
+            ? sanitizeExternalUrl(contact.youtube, current.contact.youtube)
+            : current.contact.youtube,
+        tiktok:
+          contact.tiktok !== undefined
+            ? sanitizeExternalUrl(contact.tiktok, current.contact.tiktok)
+            : current.contact.tiktok,
       };
       upsert.run('contact', JSON.stringify(mergedContact));
     }
-    if (ai) {
+    if (ai && typeof ai === 'object') {
       const mergedAi = { ...current.ai, ...ai };
       upsert.run('ai', JSON.stringify(mergedAi));
     }
@@ -1121,7 +1389,7 @@ export function registerRoutes(app: Express): void {
         String(specialtySummary || '').trim(),
         String(crfa || '').trim(),
         String(bio || '').trim(),
-        String(photoUrl || '').trim(),
+        sanitizeImageUrl(photoUrl, ''),
         active === false ? 0 : 1,
         JSON.stringify(workingHours || {})
       );
@@ -1143,7 +1411,11 @@ export function registerRoutes(app: Express): void {
 
   app.put('/api/admin/professionals/:id', requireAuth, (req: AuthenticatedRequest, res: Response) => {
     const user = req.authUser!;
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const existing = db.prepare('SELECT * FROM professionals WHERE id = ?').get(id) as any;
     if (!existing) {
       res.status(404).json({ error: 'Profissional não encontrado.' });
@@ -1158,8 +1430,14 @@ export function registerRoutes(app: Express): void {
 
     const { name, specialtySummary, crfa, bio, photoUrl, active, workingHours, specialtyIds } = req.body || {};
     if (user.role === 'professional') {
+      let existingHours: Record<string, unknown> = {};
+      try {
+        existingHours = JSON.parse(existing.working_hours_json || '{}');
+      } catch {
+        existingHours = {};
+      }
       db.prepare('UPDATE professionals SET working_hours_json = ? WHERE id = ?').run(
-        JSON.stringify(workingHours || JSON.parse(existing.working_hours_json)),
+        JSON.stringify(workingHours || existingHours),
         id
       );
     } else {
@@ -1172,7 +1450,7 @@ export function registerRoutes(app: Express): void {
         specialtySummary !== undefined ? String(specialtySummary).trim() : existing.specialty_summary,
         crfa !== undefined ? String(crfa).trim() : existing.crfa,
         bio !== undefined ? String(bio).trim() : existing.bio,
-        photoUrl !== undefined ? String(photoUrl).trim() : existing.photo_url,
+        photoUrl !== undefined ? sanitizeImageUrl(photoUrl, existing.photo_url) : existing.photo_url,
         active !== undefined ? (active ? 1 : 0) : existing.active,
         workingHours !== undefined ? JSON.stringify(workingHours) : existing.working_hours_json,
         id
@@ -1194,7 +1472,16 @@ export function registerRoutes(app: Express): void {
   });
 
   app.delete('/api/admin/professionals/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
+    const existing = db.prepare('SELECT id FROM professionals WHERE id = ?').get(id);
+    if (!existing) {
+      res.status(404).json({ error: 'Profissional não encontrado.' });
+      return;
+    }
     const hasAppts = (
       db.prepare('SELECT COUNT(*) as cnt FROM appointments WHERE professional_id = ?').get(id) as {
         cnt: number;
@@ -1270,7 +1557,11 @@ export function registerRoutes(app: Express): void {
   });
 
   app.put('/api/admin/specialties/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const existing = db.prepare('SELECT * FROM specialties WHERE id = ?').get(id) as any;
     if (!existing) {
       res.status(404).json({ error: 'Especialidade não encontrada.' });
@@ -1312,7 +1603,16 @@ export function registerRoutes(app: Express): void {
   });
 
   app.delete('/api/admin/specialties/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
+    const existing = db.prepare('SELECT id FROM specialties WHERE id = ?').get(id);
+    if (!existing) {
+      res.status(404).json({ error: 'Especialidade não encontrada.' });
+      return;
+    }
     const hasAppts = (
       db.prepare('SELECT COUNT(*) as cnt FROM appointments WHERE specialty_id = ?').get(id) as {
         cnt: number;
@@ -1355,21 +1655,40 @@ export function registerRoutes(app: Express): void {
   });
 
   app.put('/api/admin/faqs/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const { question, answer, category, sortOrder, active } = req.body || {};
-    db.prepare('UPDATE faqs SET question = ?, answer = ?, category = ?, sort_order = ?, active = ? WHERE id = ?').run(
-      String(question || '').trim(),
-      String(answer || '').trim(),
-      String(category || 'Geral').trim(),
-      Number(sortOrder) || 10,
-      active === false ? 0 : 1,
-      id
-    );
+    const info = db
+      .prepare('UPDATE faqs SET question = ?, answer = ?, category = ?, sort_order = ?, active = ? WHERE id = ?')
+      .run(
+        String(question || '').trim(),
+        String(answer || '').trim(),
+        String(category || 'Geral').trim(),
+        Number(sortOrder) || 10,
+        active === false ? 0 : 1,
+        id
+      );
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Pergunta frequente não encontrada.' });
+      return;
+    }
     res.json({ ok: true });
   });
 
   app.delete('/api/admin/faqs/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    db.prepare('DELETE FROM faqs WHERE id = ?').run(Number(req.params.id));
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
+    const info = db.prepare('DELETE FROM faqs WHERE id = ?').run(id);
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Pergunta frequente não encontrada.' });
+      return;
+    }
     res.json({ ok: true });
   });
 
@@ -1401,16 +1720,35 @@ export function registerRoutes(app: Express): void {
   });
 
   app.put('/api/admin/knowledge/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const { title, category, content, active } = req.body || {};
-    db.prepare(
-      "UPDATE knowledge_base SET title = ?, category = ?, content = ?, active = ?, updated_at = datetime('now') WHERE id = ?"
-    ).run(String(title || '').trim(), String(category || 'Institucional').trim(), String(content || '').trim(), active === false ? 0 : 1, id);
+    const info = db
+      .prepare(
+        "UPDATE knowledge_base SET title = ?, category = ?, content = ?, active = ?, updated_at = datetime('now') WHERE id = ?"
+      )
+      .run(String(title || '').trim(), String(category || 'Institucional').trim(), String(content || '').trim(), active === false ? 0 : 1, id);
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Item da base de conhecimento não encontrado.' });
+      return;
+    }
     res.json({ ok: true });
   });
 
   app.delete('/api/admin/knowledge/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    db.prepare('DELETE FROM knowledge_base WHERE id = ?').run(Number(req.params.id));
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
+    const info = db.prepare('DELETE FROM knowledge_base WHERE id = ?').run(id);
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Item da base de conhecimento não encontrado.' });
+      return;
+    }
     res.json({ ok: true });
   });
 
@@ -1433,9 +1771,17 @@ export function registerRoutes(app: Express): void {
   });
 
   app.patch('/api/admin/contacts/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const status = req.body?.status === 'respondido' ? 'respondido' : 'novo';
-    db.prepare('UPDATE contact_messages SET status = ? WHERE id = ?').run(status, id);
+    const info = db.prepare('UPDATE contact_messages SET status = ? WHERE id = ?').run(status, id);
+    if (info.changes === 0) {
+      res.status(404).json({ error: 'Mensagem de contato não encontrada.' });
+      return;
+    }
     res.json({ ok: true });
   });
 
@@ -1460,8 +1806,8 @@ export function registerRoutes(app: Express): void {
   app.post('/api/admin/users', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
     const { name, email, password, role, professionalId } = req.body || {};
     const cleanEmail = String(email || '').trim().toLowerCase();
-    if (!name || !cleanEmail || !password || String(password).length < 6) {
-      res.status(400).json({ error: 'Preencha nome, e-mail e senha com pelo menos 6 caracteres.' });
+    if (!name || String(name).trim().length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail) || !password || String(password).length < 6) {
+      res.status(400).json({ error: 'Preencha nome, um e-mail válido e senha com pelo menos 6 caracteres.' });
       return;
     }
     const validRole = role === 'admin' ? 'admin' : 'professional';
@@ -1488,7 +1834,11 @@ export function registerRoutes(app: Express): void {
   });
 
   app.patch('/api/admin/users/:id', requireAuth, requireAdmin, (req: AuthenticatedRequest, res: Response) => {
-    const id = Number(req.params.id);
+    const id = parsePositiveInt(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: 'ID inválido.' });
+      return;
+    }
     const { active, role, professionalId, newPassword } = req.body || {};
     const existing = db.prepare('SELECT * FROM users WHERE id = ?').get(id) as any;
     if (!existing) {

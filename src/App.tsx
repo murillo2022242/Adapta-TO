@@ -2,20 +2,42 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
-import React from 'react';
-import { MotionConfig } from 'motion/react';
+import React, { Suspense, lazy } from 'react';
 import { ClinicProvider, useClinic } from './context/ClinicContext.tsx';
 import { Layout } from './components/Layout.tsx';
 import { FloatingWidgets } from './components/FloatingWidgets.tsx';
 import { HomePage } from './pages/HomePage.tsx';
-import { AboutPage } from './pages/AboutPage.tsx';
-import { SpecialtiesPage } from './pages/SpecialtiesPage.tsx';
-import { ProfessionalsPage } from './pages/ProfessionalsPage.tsx';
-import { BookingPage } from './pages/BookingPage.tsx';
-import { FaqPage } from './pages/FaqPage.tsx';
-import { ContactPage } from './pages/ContactPage.tsx';
-import { PrivacyPage } from './pages/PrivacyPage.tsx';
-import { AdminPage } from './pages/AdminPage.tsx';
+
+const AboutPage = lazy(() =>
+  import('./pages/AboutPage.tsx').then((m) => ({ default: m.AboutPage }))
+);
+const SpecialtiesPage = lazy(() =>
+  import('./pages/SpecialtiesPage.tsx').then((m) => ({ default: m.SpecialtiesPage }))
+);
+const BookingPage = lazy(() =>
+  import('./pages/BookingPage.tsx').then((m) => ({ default: m.BookingPage }))
+);
+const FaqPage = lazy(() =>
+  import('./pages/FaqPage.tsx').then((m) => ({ default: m.FaqPage }))
+);
+const ContactPage = lazy(() =>
+  import('./pages/ContactPage.tsx').then((m) => ({ default: m.ContactPage }))
+);
+const PrivacyPage = lazy(() =>
+  import('./pages/PrivacyPage.tsx').then((m) => ({ default: m.PrivacyPage }))
+);
+const AdminPage = lazy(() =>
+  import('./pages/AdminPage.tsx').then((m) => ({ default: m.AdminPage }))
+);
+
+function RouteLoadingFallback() {
+  return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center gap-3 bg-[#FAF9FC] text-sm text-[var(--color-forest)]">
+      <div className="w-6 h-6 rounded-full border-2 border-[var(--color-sage)] border-t-[var(--color-forest)] animate-spin" />
+      <span>Carregando página...</span>
+    </div>
+  );
+}
 
 function AppRouter() {
   const { loading, error, currentPath, navigate, refreshData } = useClinic();
@@ -24,7 +46,7 @@ function AppRouter() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-[var(--color-beige)] text-sm text-[var(--color-forest)]">
         <div className="w-7 h-7 rounded-full border-2 border-[var(--color-sage)] border-t-[var(--color-forest)] animate-spin" />
-        <span className="tracking-wide">Carregando clínica adaptaTO...</span>
+        <span className="tracking-wide">Carregando Espaço Adapta T.O...</span>
       </div>
     );
   }
@@ -46,7 +68,11 @@ function AppRouter() {
 
   // Admin route renders its own clean workspace shell
   if (currentPath === '/admin' || currentPath.startsWith('/admin/')) {
-    return <AdminPage />;
+    return (
+      <Suspense fallback={<RouteLoadingFallback />}>
+        <AdminPage />
+      </Suspense>
+    );
   }
 
   const renderPage = () => {
@@ -57,7 +83,7 @@ function AppRouter() {
       const slug = currentPath.replace('/especialidades/', '').replace(/\/$/, '');
       return <SpecialtiesPage selectedSlug={slug} />;
     }
-    if (currentPath === '/profissionais') return <ProfessionalsPage />;
+    if (currentPath === '/profissionais') return <HomePage />;
     if (currentPath === '/agendamento') return <BookingPage />;
     if (currentPath === '/duvidas') return <FaqPage />;
     if (currentPath === '/contato') return <ContactPage />;
@@ -84,18 +110,64 @@ function AppRouter() {
 
   return (
     <Layout>
-      {renderPage()}
+      <Suspense fallback={<RouteLoadingFallback />}>{renderPage()}</Suspense>
       <FloatingWidgets />
     </Layout>
   );
 }
 
+class AppErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(err: unknown) {
+    console.error('App render error:', err);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF9FC] px-6 text-center text-[#1F2937]">
+          <h1 className="font-display text-2xl font-bold mb-2">Espaço Adapta T.O</h1>
+          <p className="text-sm text-[#4B5563] max-w-md mb-6">
+            Ocorreu uma falha temporária ao exibir a página. Clique abaixo para recarregar.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              try {
+                localStorage.removeItem('adaptato_bootstrap_cache_v10');
+              } catch {
+                // ignore
+              }
+              window.location.reload();
+            }}
+            className="px-6 py-3 rounded-xl bg-[#C95874] text-white text-sm font-semibold cursor-pointer"
+          >
+            Recarregar site
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function App() {
   return (
-    <MotionConfig reducedMotion="user">
+    <AppErrorBoundary>
       <ClinicProvider>
         <AppRouter />
       </ClinicProvider>
-    </MotionConfig>
+    </AppErrorBoundary>
   );
 }

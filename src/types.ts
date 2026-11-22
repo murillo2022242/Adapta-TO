@@ -71,6 +71,7 @@ export interface SiteImages {
   aboutSpaceImage: string;
   aboutSessionImage: string;
   specialtiesBannerImage: string;
+  galleryImages?: string[];
 }
 
 export interface ContactInfo {
@@ -222,9 +223,36 @@ export interface DashboardStats {
   upcoming: Appointment[];
 }
 
+export type SlotState = 'livre' | 'ocupado' | 'bloqueado' | 'indisponivel';
+
+export interface SlotDetail {
+  time: string;
+  status: SlotState;
+  label: string;
+  location?: string;
+}
+
 export interface DayAvailabilitySummary {
   date: string;
   availableCount: number;
+  occupiedCount?: number;
+  blockedCount?: number;
+  totalCount?: number;
   blocked: boolean;
   reason?: string;
 }
+
+export interface LiveScheduleDay {
+  date: string;
+  weekdayShort: string;
+  weekdayFull: string;
+  availableCount: number;
+  occupiedCount: number;
+  blockedCount: number;
+  totalCount: number;
+  blocked: boolean;
+  reason?: string;
+  location: string;
+  slots: SlotDetail[];
+}
+

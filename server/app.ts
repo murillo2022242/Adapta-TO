@@ -28,22 +28,47 @@ export function getExpressApp(): Express {
     next();
   });
 
-  app.use('/uploads', express.static(UPLOADS_DIR));
+  app.use(
+    '/uploads',
+    express.static(UPLOADS_DIR, {
+      setHeaders: (res) => {
+        res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      },
+    })
+  );
+
+  const escapeXml = (str: string): string =>
+    str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+
+  const getSafeOrigin = (req: Request): string => {
+    const raw = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    try {
+      const parsed = new URL(raw);
+      return `${parsed.protocol}//${parsed.host}`;
+    } catch {
+      return 'https://espacoadaptato.com.br';
+    }
+  };
 
   app.get('/robots.txt', (req, res) => {
-    const origin = process.env.APP_URL || `${req.protocol}://${req.get('host')}`;
+    const origin = getSafeOrigin(req);
     res.type('text/plain').send(
       `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\n\nSitemap: ${origin}/sitemap.xml\n`
     );
   });
 
   app.get('/sitemap.xml', (req, res) => {
-    const origin = (process.env.APP_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
+    const origin = getSafeOrigin(req);
     const staticPaths = [
       '/',
       '/sobre',
       '/especialidades',
-      '/profissionais',
       '/agendamento',
       '/duvidas',
       '/contato',
@@ -56,11 +81,11 @@ export function getExpressApp(): Express {
 
     const allUrls = [
       ...staticPaths.map((p) => `${origin}${p}`),
-      ...specRows.map((s) => `${origin}/especialidades/${s.slug}`),
+      ...specRows.map((s) => `${origin}/especialidades/${encodeURIComponent(s.slug)}`),
     ];
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${allUrls
-      .map((u) => `  <url><loc>${u}</loc></url>`)
+      .map((u) => `  <url><loc>${escapeXml(u)}</loc></url>`)
       .join('\n')}\n</urlset>`;
 
     res.type('application/xml').send(xml);

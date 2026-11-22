@@ -1,6 +1,8 @@
 import { db } from './db.ts';
 import { hashPassword } from './auth.ts';
 import {
+  DEFAULT_FAQS_SEED,
+  DEFAULT_PROFESSIONALS_SEED,
   DEFAULT_SITE_SETTINGS,
   DEFAULT_WEEKLY_SCHEDULE,
   PEDIATRIC_SPECIALTIES,
@@ -94,62 +96,32 @@ export function seedInitialData(): void {
       VALUES (?, ?, ?, ?, ?, 1, ?)
     `);
     const p1 = insertProf.run(
-      'Dra. Camila Mendes',
-      'Linguagem Infantil · Desenvolvimento da Comunicação · Orientação Familiar',
-      'CRFa a informar pela clínica',
-      '[Perfil modelo editável] Fonoaudióloga dedicada ao atendimento acolhedor de bebês, crianças e famílias, com foco no respeito ao ritmo de desenvolvimento e comunicação funcional.',
-      '/src/assets/images/professional_portrait_one_1795193186394.jpg',
+      DEFAULT_PROFESSIONALS_SEED[0].name,
+      DEFAULT_PROFESSIONALS_SEED[0].specialtySummary,
+      DEFAULT_PROFESSIONALS_SEED[0].crfa,
+      DEFAULT_PROFESSIONALS_SEED[0].bio,
+      DEFAULT_PROFESSIONALS_SEED[0].photoUrl,
       JSON.stringify(DEFAULT_WEEKLY_SCHEDULE)
     );
     const p2 = insertProf.run(
-      'Dr. Lucas Ferreira',
-      'Fala e Articulação Infantil · Motricidade Orofacial · Fluência Infantil',
-      'CRFa a informar pela clínica',
-      '[Perfil modelo editável] Fonoaudiólogo dedicado ao atendimento infantil, com foco em articulação da fala, motricidade orofacial, fluência e acompanhamento individualizado junto às famílias.',
-      '/src/assets/images/professional_portrait_two_1795193185516.jpg',
+      DEFAULT_PROFESSIONALS_SEED[1].name,
+      DEFAULT_PROFESSIONALS_SEED[1].specialtySummary,
+      DEFAULT_PROFESSIONALS_SEED[1].crfa,
+      DEFAULT_PROFESSIONALS_SEED[1].bio,
+      DEFAULT_PROFESSIONALS_SEED[1].photoUrl,
       JSON.stringify(DEFAULT_WEEKLY_SCHEDULE)
     );
 
-    const allSpecs = db.prepare('SELECT id, sort_order FROM specialties').all() as Array<{
+    const allSpecs = db.prepare('SELECT id FROM specialties WHERE active = 1').all() as Array<{
       id: number;
-      sort_order: number;
     }>;
     const linkStmt = db.prepare(
       'INSERT OR IGNORE INTO professional_specialties (professional_id, specialty_id) VALUES (?, ?)'
     );
     for (const sp of allSpecs) {
-      if (sp.sort_order <= 9) {
-        linkStmt.run(p1.lastInsertRowid, sp.id);
-        linkStmt.run(p2.lastInsertRowid, sp.id);
-      }
+      linkStmt.run(p1.lastInsertRowid, sp.id);
+      linkStmt.run(p2.lastInsertRowid, sp.id);
     }
-  }
-
-  // One-time upgrade for existing database to include expanded booking hours
-  const expandedFlag = db
-    .prepare("SELECT value FROM site_settings WHERE key = 'schedule_expanded_v2'")
-    .get() as { value: string } | undefined;
-  if (!expandedFlag) {
-    db.prepare('UPDATE professionals SET working_hours_json = ?').run(
-      JSON.stringify(DEFAULT_WEEKLY_SCHEDULE)
-    );
-    const curContactRow = db
-      .prepare("SELECT value FROM site_settings WHERE key = 'contact'")
-      .get() as { value: string } | undefined;
-    if (curContactRow) {
-      try {
-        const parsed = JSON.parse(curContactRow.value);
-        if (parsed.hours === 'Segunda a Sexta, das 08h00 às 18h00') {
-          parsed.hours = DEFAULT_SITE_SETTINGS.contact.hours;
-          db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('contact', ?)").run(
-            JSON.stringify(parsed)
-          );
-        }
-      } catch {
-        // ignore
-      }
-    }
-    db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('schedule_expanded_v2', '1')").run();
   }
 
   const userCount = (
@@ -166,22 +138,22 @@ export function seedInitialData(): void {
       VALUES (?, ?, ?, ?, ?, 1)
     `);
     insertUser.run(
-      'Administração adaptaTO',
+      'Administração Espaço Adapta T.O',
       'murillo.arthur20@gmail.com',
       hashPassword('murillo20'),
       'admin',
       null
     );
     insertUser.run(
-      'Dra. Camila Mendes',
-      'camila@adaptato.com.br',
-      hashPassword('AdaptaFono2026!'),
+      'Sumara Najla',
+      'sumara@espacoadaptato.com.br',
+      hashPassword('AdaptaTO2026!'),
       'professional',
       firstProf ? firstProf.id : null
     );
   }
 
-  // One-time update of admin & visual editor credentials
+  // Ensure admin & visual editor credentials are set cleanly
   const credsFlag = db
     .prepare("SELECT value FROM site_settings WHERE key = 'admin_credentials_v2'")
     .get() as { value: string } | undefined;
@@ -196,41 +168,26 @@ export function seedInitialData(): void {
     db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('admin_credentials_v2', '1')").run();
   }
 
+  const editorPassResetFlag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'editor_password_murillo20_v1'")
+    .get() as { value: string } | undefined;
+  if (!editorPassResetFlag) {
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('editor_password_hash', ?, datetime('now'))"
+    ).run(hashPassword('murillo20'));
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value) VALUES ('editor_password_murillo20_v1', '1')"
+    ).run();
+  }
+
   const faqCount = (db.prepare('SELECT COUNT(*) as cnt FROM faqs').get() as { cnt: number }).cnt;
   if (faqCount === 0) {
     const insertFaq = db.prepare(
       'INSERT INTO faqs (question, answer, category, sort_order, active) VALUES (?, ?, ?, ?, 1)'
     );
-    insertFaq.run(
-      'Como funciona a primeira consulta na adaptaTO?',
-      'O primeiro encontro costuma ser uma avaliação infantil ou entrevista de acolhimento com os pais, onde ouvimos as queixas, observamos a comunicação da criança e explicamos os próximos passos.',
-      'Atendimento',
-      1
-    );
-    insertFaq.run(
-      'Ao solicitar um horário pelo site, minha consulta já está confirmada?',
-      'Não. O envio pelo site registra uma solicitação de agendamento com status pendente. Nossa equipe verifica a agenda e entra em contato (por telefone ou WhatsApp) para confirmar oficialmente o horário.',
-      'Agendamento',
-      2
-    );
-    insertFaq.run(
-      'A clínica atende apenas crianças?',
-      'Sim. A adaptaTO é especializada exclusivamente no atendimento fonoaudiológico infantil, acompanhando bebês e crianças em cada fase da infância, sempre em parceria com os pais e responsáveis.',
-      'Especialidades',
-      3
-    );
-    insertFaq.run(
-      'Como posso remarcar ou cancelar uma solicitação?',
-      'Você pode consultar ou cancelar seu protocolo diretamente na aba "Acompanhar protocolo" na página de Agendamento ou entrar em contato com nossa equipe pelo WhatsApp.',
-      'Agendamento',
-      4
-    );
-    insertFaq.run(
-      'Como meus dados pessoais são protegidos?',
-      'Seguimos as diretrizes da Lei Geral de Proteção de Dados (LGPD). Coletamos apenas os dados estritamente necessários para o contato e agendamento, sem expor informações públicas de pacientes.',
-      'Privacidade',
-      5
-    );
+    for (const f of DEFAULT_FAQS_SEED) {
+      insertFaq.run(f.question, f.answer, f.category, f.sortOrder);
+    }
   }
 
   const kbCount = (
@@ -241,187 +198,353 @@ export function seedInitialData(): void {
       'INSERT INTO knowledge_base (title, category, content, active) VALUES (?, ?, ?, 1)'
     );
     insertKb.run(
-      'Público Atendido (Exclusivo Infantil)',
+      'Sobre o Espaço Adapta T.O (Especialização em TEA)',
       'Institucional',
-      'A clínica adaptaTO atende exclusivamente bebês e crianças (fonoaudiologia infantil) e oferece orientação aos pais, responsáveis e escolas. Não atendemos adultos ou idosos.',
+      'O Espaço Adapta T.O é uma clínica especializada no atendimento multidisciplinar de pessoas com Transtorno do Espectro Autista (TEA), fundada em 2019 por Sumara Najla (Terapeuta Ocupacional) em parceria administrativa com sua irmã Sâmara Ribeiro.'
     );
     insertKb.run(
-      'Proposta de Atendimento adaptaTO',
-      'Institucional',
-      'A adaptaTO oferece atendimento fonoaudiológico infantil humanizado, individualizado e acolhedor, respeitando o ritmo de cada criança e mantendo parceria próxima com familiares e responsáveis.',
+      'Abordagens Terapêuticas Baseadas em Evidências',
+      'Abordagens',
+      'Utilizamos Análise do Comportamento Aplicada (ABA), Modelo Denver de Intervenção Precoce (ESDM), Comunicação Alternativa e Aumentativa (CAA), Integração Sensorial (IS) e PediaSuit.'
+    );
+    insertKb.run(
+      'Unidades e Horário de Atendimento em Cuiabá/MT',
+      'Unidades',
+      'Matriz: Rua Major Gama, 950, Centro Sul - Cuiabá/MT. Filial: Rua Barão de Melgaço, 2350, Edifício Barão Center, Sala 104, Centro Sul - Cuiabá/MT. Horário: Segunda a Sexta das 8h às 18h. Telefones: (65) 99989-3202 e (65) 99233-0091.'
     );
     insertKb.run(
       'Regra de Confirmação de Agendamento',
       'Agendamento',
-      'As solicitações realizadas pelo formulário do site ficam registradas como pendentes até a confirmação oficial da recepção ou profissional da clínica. Nunca garanta que um horário está fechado antes da confirmação da equipe.',
-    );
-    insertKb.run(
-      'Valores e Convênios',
-      'Financeiro',
-      'Informações sobre valores de sessões, pacotes ou reembolsos devem ser consultadas diretamente com a equipe da clínica pelo WhatsApp oficial.',
+      'As solicitações realizadas pelo formulário do site ficam registradas como pendentes na agenda da clínica até a confirmação oficial da recepção.'
     );
   }
 
-  // One-time migration to tailor existing default records exclusively for pediatric speech-language clinic
-  const pediatricFlag = db
-    .prepare("SELECT value FROM site_settings WHERE key = 'pediatric_only_v3'")
+  // One-time upgrade to Espaço Adapta T.O (v4) preserving existing users & appointments
+  const v4Flag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'espaco_adapta_to_v4'")
     .get() as { value: string } | undefined;
-  if (!pediatricFlag) {
-    // 1. Update site_settings content and ai if using prior seeded defaults
-    const contentRow = db.prepare("SELECT value FROM site_settings WHERE key = 'content'").get() as
-      | { value: string }
-      | undefined;
-    if (contentRow) {
-      try {
-        const cur = JSON.parse(contentRow.value);
-        const updatedContent = {
-          ...cur,
-          heroKicker:
-            cur.heroKicker === 'Fonoaudiologia Clínica · Atendimento Humanizado'
-              ? DEFAULT_SITE_SETTINGS.content.heroKicker
-              : cur.heroKicker,
-          heroTitle:
-            cur.heroTitle === 'Comunicação, desenvolvimento e cuidado em cada etapa da vida.'
-              ? DEFAULT_SITE_SETTINGS.content.heroTitle
-              : cur.heroTitle,
-          heroSubtitle:
-            cur.heroSubtitle?.includes('cada pessoa tem seu próprio ritmo')
-              ? DEFAULT_SITE_SETTINGS.content.heroSubtitle
-              : cur.heroSubtitle,
-          introKicker:
-            cur.introKicker === 'Nossa proposta de cuidado'
-              ? DEFAULT_SITE_SETTINGS.content.introKicker
-              : cur.introKicker,
-          introTitle:
-            cur.introTitle === 'Seu desenvolvimento merece atenção especial.'
-              ? DEFAULT_SITE_SETTINGS.content.introTitle
-              : cur.introTitle,
-          introText:
-            cur.introText?.includes('crianças, adolescentes, adultos e famílias')
-              ? DEFAULT_SITE_SETTINGS.content.introText
-              : cur.introText,
-          introHighlights:
-            cur.introHighlights === 'Avaliação cuidadosa · Escuta às famílias · Respeito a cada etapa'
-              ? DEFAULT_SITE_SETTINGS.content.introHighlights
-              : cur.introHighlights,
-          specialtiesSectionKicker:
-            cur.specialtiesSectionKicker === 'Áreas de atuação'
-              ? DEFAULT_SITE_SETTINGS.content.specialtiesSectionKicker
-              : cur.specialtiesSectionKicker,
-          specialtiesSectionTitle:
-            cur.specialtiesSectionTitle === 'Especialidades em fonoaudiologia'
-              ? DEFAULT_SITE_SETTINGS.content.specialtiesSectionTitle
-              : cur.specialtiesSectionTitle,
-          differentialsTitle:
-            cur.differentialsTitle === 'Um cuidado pensado para cada história'
-              ? DEFAULT_SITE_SETTINGS.content.differentialsTitle
-              : cur.differentialsTitle,
-          differentials: DEFAULT_SITE_SETTINGS.content.differentials,
-          aboutPageTitle:
-            cur.aboutPageTitle === 'Cuidado fonoaudiológico com acolhimento, escuta e responsabilidade clínica.'
-              ? DEFAULT_SITE_SETTINGS.content.aboutPageTitle
-              : cur.aboutPageTitle,
-          aboutTeamTitle:
-            cur.aboutTeamTitle === 'Profissionais dedicados ao seu acompanhamento'
-              ? DEFAULT_SITE_SETTINGS.content.aboutTeamTitle
-              : cur.aboutTeamTitle,
-          specialtiesPageTitle:
-            cur.specialtiesPageTitle === 'Especialidades fonoaudiológicas'
-              ? DEFAULT_SITE_SETTINGS.content.specialtiesPageTitle
-              : cur.specialtiesPageTitle,
-          specialtiesPageSubtitle:
-            cur.specialtiesPageSubtitle?.includes('necessidades reais do paciente')
-              ? DEFAULT_SITE_SETTINGS.content.specialtiesPageSubtitle
-              : cur.specialtiesPageSubtitle,
-          bookingPageTitle:
-            cur.bookingPageTitle === 'Solicite sua consulta na adaptaTO'
-              ? DEFAULT_SITE_SETTINGS.content.bookingPageTitle
-              : cur.bookingPageTitle,
-          footerTagline:
-            cur.footerTagline?.includes('em todas as fases da vida')
-              ? DEFAULT_SITE_SETTINGS.content.footerTagline
-              : cur.footerTagline,
-        };
-        db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('content', ?)").run(
-          JSON.stringify(updatedContent)
-        );
-      } catch {
-        // ignore
-      }
-    }
 
-    const aiRow = db.prepare("SELECT value FROM site_settings WHERE key = 'ai'").get() as
-      | { value: string }
-      | undefined;
-    if (aiRow) {
-      try {
-        const curAi = JSON.parse(aiRow.value);
-        if (curAi.welcomeMessage?.includes('conhecer nossos atendimentos, encontrar informações')) {
-          curAi.welcomeMessage = DEFAULT_SITE_SETTINGS.ai.welcomeMessage;
-        }
-        curAi.customInstructions = DEFAULT_SITE_SETTINGS.ai.customInstructions;
-        db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('ai', ?)").run(
-          JSON.stringify(curAi)
-        );
-      } catch {
-        // ignore
-      }
-    }
+  if (!v4Flag) {
+    const insertSetting = db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+    );
+    insertSetting.run('theme', JSON.stringify(DEFAULT_SITE_SETTINGS.theme));
+    insertSetting.run('content', JSON.stringify(DEFAULT_SITE_SETTINGS.content));
+    insertSetting.run('images', JSON.stringify(DEFAULT_SITE_SETTINGS.images));
+    insertSetting.run('contact', JSON.stringify(DEFAULT_SITE_SETTINGS.contact));
+    insertSetting.run('ai', JSON.stringify(DEFAULT_SITE_SETTINGS.ai));
 
-    // 2. Replace adult specialty with pediatric reading/writing specialty & update default specialties
-    const updateSpecBySlug = db.prepare(`
+    // In-place update of existing specialty rows to the 9 Espaço Adapta T.O specialties
+    // so existing appointment foreign keys remain 100% valid
+    const existingSpecs = db
+      .prepare('SELECT id FROM specialties ORDER BY id ASC')
+      .all() as Array<{ id: number }>;
+
+    const updateSpecById = db.prepare(`
       UPDATE specialties
       SET slug = ?, name = ?, icon = ?, short_description = ?, full_description = ?,
-          target_audience = ?, objectives = ?, how_it_works = ?
-      WHERE slug = ?
+          target_audience = ?, objectives = ?, how_it_works = ?,
+          confirmation_status = ?, active = 1, sort_order = ?
+      WHERE id = ?
     `);
-    for (const s of PEDIATRIC_SPECIALTIES) {
-      const targetSlug = s.slug === 'leitura-e-escrita-infantil' ? 'linguagem-adulta' : s.slug;
-      updateSpecBySlug.run(
-        s.slug,
-        s.name,
-        s.icon,
-        s.shortDescription,
-        s.fullDescription,
-        s.targetAudience,
-        s.objectives,
-        s.howItWorks,
-        targetSlug
+    const insertSpec = db.prepare(`
+      INSERT INTO specialties (
+        slug, name, icon, short_description, full_description,
+        target_audience, objectives, how_it_works, confirmation_status, active, sort_order
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)
+    `);
+
+    const activeSpecIds: number[] = [];
+    PEDIATRIC_SPECIALTIES.forEach((sp, idx) => {
+      const targetRow = existingSpecs[idx];
+      if (targetRow) {
+        updateSpecById.run(
+          sp.slug,
+          sp.name,
+          sp.icon,
+          sp.shortDescription,
+          sp.fullDescription,
+          sp.targetAudience,
+          sp.objectives,
+          sp.howItWorks,
+          sp.confirmationStatus,
+          sp.sortOrder,
+          targetRow.id
+        );
+        activeSpecIds.push(targetRow.id);
+      } else {
+        const res = insertSpec.run(
+          sp.slug,
+          sp.name,
+          sp.icon,
+          sp.shortDescription,
+          sp.fullDescription,
+          sp.targetAudience,
+          sp.objectives,
+          sp.howItWorks,
+          sp.confirmationStatus,
+          sp.sortOrder
+        );
+        activeSpecIds.push(Number(res.lastInsertRowid));
+      }
+    });
+
+    // Deactivate extra legacy specialty rows beyond the 9 services
+    if (existingSpecs.length > PEDIATRIC_SPECIALTIES.length) {
+      for (let i = PEDIATRIC_SPECIALTIES.length; i < existingSpecs.length; i++) {
+        db.prepare('UPDATE specialties SET active = 0 WHERE id = ?').run(existingSpecs[i].id);
+      }
+    }
+
+    // Update placeholder professionals & weekly hours to Mon-Fri 8h-18h
+    const existingProfs = db
+      .prepare('SELECT id, name FROM professionals ORDER BY id ASC')
+      .all() as Array<{ id: number; name: string }>;
+
+    if (existingProfs[0] && existingProfs[0].name === 'Dra. Camila Mendes') {
+      db.prepare(
+        'UPDATE professionals SET name = ?, specialty_summary = ?, crfa = ?, bio = ?, working_hours_json = ? WHERE id = ?'
+      ).run(
+        DEFAULT_PROFESSIONALS_SEED[0].name,
+        DEFAULT_PROFESSIONALS_SEED[0].specialtySummary,
+        DEFAULT_PROFESSIONALS_SEED[0].crfa,
+        DEFAULT_PROFESSIONALS_SEED[0].bio,
+        JSON.stringify(DEFAULT_WEEKLY_SCHEDULE),
+        existingProfs[0].id
+      );
+    }
+    if (existingProfs[1] && existingProfs[1].name === 'Dr. Lucas Ferreira') {
+      db.prepare(
+        'UPDATE professionals SET name = ?, specialty_summary = ?, crfa = ?, bio = ?, working_hours_json = ? WHERE id = ?'
+      ).run(
+        DEFAULT_PROFESSIONALS_SEED[1].name,
+        DEFAULT_PROFESSIONALS_SEED[1].specialtySummary,
+        DEFAULT_PROFESSIONALS_SEED[1].crfa,
+        DEFAULT_PROFESSIONALS_SEED[1].bio,
+        JSON.stringify(DEFAULT_WEEKLY_SCHEDULE),
+        existingProfs[1].id
       );
     }
 
-    // 3. Update Dr. Lucas Ferreira default summary/bio if it referenced adults
-    db.prepare(
-      `UPDATE professionals
-       SET specialty_summary = ?, bio = ?
-       WHERE name = 'Dr. Lucas Ferreira' AND specialty_summary LIKE '%Adulta%'`
-    ).run(
-      'Fala e Articulação Infantil · Motricidade Orofacial · Fluência Infantil',
-      '[Perfil modelo editável] Fonoaudiólogo dedicado ao atendimento infantil, com foco em articulação da fala, motricidade orofacial, fluência e acompanhamento individualizado junto às famílias.'
+    db.prepare('UPDATE professionals SET working_hours_json = ?').run(
+      JSON.stringify(DEFAULT_WEEKLY_SCHEDULE)
     );
 
-    // 4. Update FAQ #3 if it asks about adults
-    db.prepare(
-      `UPDATE faqs
-       SET question = ?, answer = ?
-       WHERE question LIKE '%crianças e adultos%'`
-    ).run(
-      'A clínica atende apenas crianças?',
-      'Sim. A adaptaTO é especializada exclusivamente no atendimento fonoaudiológico infantil, acompanhando bebês e crianças em cada fase da infância, sempre em parceria com os pais e responsáveis.'
+    const linkStmt = db.prepare(
+      'INSERT OR IGNORE INTO professional_specialties (professional_id, specialty_id) VALUES (?, ?)'
     );
-
-    // 5. Add explicit pediatric knowledge base rule
-    const existsKb = db
-      .prepare("SELECT id FROM knowledge_base WHERE title = 'Público Atendido (Exclusivo Infantil)'")
-      .get();
-    if (!existsKb) {
-      db.prepare('INSERT INTO knowledge_base (title, category, content, active) VALUES (?, ?, ?, 1)').run(
-        'Público Atendido (Exclusivo Infantil)',
-        'Institucional',
-        'A clínica adaptaTO atende exclusivamente bebês e crianças (fonoaudiologia infantil) e oferece orientação aos pais, responsáveis e escolas. Não atendemos adultos ou idosos.'
-      );
+    for (const prof of existingProfs) {
+      for (const specId of activeSpecIds) {
+        linkStmt.run(prof.id, specId);
+      }
     }
 
-    db.prepare("INSERT OR REPLACE INTO site_settings (key, value) VALUES ('pediatric_only_v3', '1')").run();
+    // Refresh FAQs cleanly
+    db.prepare('DELETE FROM faqs').run();
+    const insertFaq = db.prepare(
+      'INSERT INTO faqs (question, answer, category, sort_order, active) VALUES (?, ?, ?, ?, 1)'
+    );
+    for (const f of DEFAULT_FAQS_SEED) {
+      insertFaq.run(f.question, f.answer, f.category, f.sortOrder);
+    }
+
+    // Refresh knowledge_base with Espaço Adapta T.O details
+    db.prepare('DELETE FROM knowledge_base').run();
+    const insertKb = db.prepare(
+      'INSERT INTO knowledge_base (title, category, content, active) VALUES (?, ?, ?, 1)'
+    );
+    insertKb.run(
+      'Sobre o Espaço Adapta T.O (Especialização em TEA)',
+      'Institucional',
+      'O Espaço Adapta T.O é uma clínica especializada no atendimento multidisciplinar de pessoas com Transtorno do Espectro Autista (TEA), fundada em 2019 por Sumara Najla (Terapeuta Ocupacional) em parceria administrativa com sua irmã Sâmara Ribeiro.'
+    );
+    insertKb.run(
+      'Abordagens Terapêuticas Baseadas em Evidências',
+      'Abordagens',
+      'Utilizamos Análise do Comportamento Aplicada (ABA), Modelo Denver de Intervenção Precoce (ESDM), Comunicação Alternativa e Aumentativa (CAA), Integração Sensorial (IS) e PediaSuit.'
+    );
+    insertKb.run(
+      'Unidades e Horário de Atendimento em Cuiabá/MT',
+      'Unidades',
+      'Matriz: Rua Major Gama, 950, Centro Sul - Cuiabá/MT. Filial: Rua Barão de Melgaço, 2350, Edifício Barão Center, Sala 104, Centro Sul - Cuiabá/MT. Horário: Segunda a Sexta das 8h às 18h. Telefones: (65) 99989-3202 e (65) 99233-0091.'
+    );
+    insertKb.run(
+      'Regra de Confirmação de Agendamento',
+      'Agendamento',
+      'As solicitações realizadas pelo formulário do site ficam registradas como pendentes na agenda da clínica até a confirmação oficial da recepção.'
+    );
+
+    insertSetting.run('espaco_adapta_to_v4', '1');
+  }
+
+  // Idempotent cleanup of old "Agenda ao vivo" booking copy for already-seeded DBs
+  const v5BookingCopyFlag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'remove_live_agenda_copy_v5'")
+    .get() as { value: string } | undefined;
+
+  if (!v5BookingCopyFlag) {
+    const contentRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'content'")
+      .get() as { value: string } | undefined;
+    if (contentRow?.value) {
+      try {
+        const parsedContent = JSON.parse(contentRow.value) as Record<string, unknown>;
+        let changed = false;
+        if (parsedContent.bookingPageKicker === 'Agenda ao vivo · Espaço Adapta T.O') {
+          parsedContent.bookingPageKicker = DEFAULT_SITE_SETTINGS.content.bookingPageKicker;
+          changed = true;
+        }
+        if (
+          typeof parsedContent.bookingPageSubtitle === 'string' &&
+          parsedContent.bookingPageSubtitle.includes('agenda em tempo real')
+        ) {
+          parsedContent.bookingPageSubtitle = DEFAULT_SITE_SETTINGS.content.bookingPageSubtitle;
+          changed = true;
+        }
+        if (changed) {
+          db.prepare(
+            "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('content', ?, datetime('now'))"
+          ).run(JSON.stringify(parsedContent));
+        }
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('remove_live_agenda_copy_v5', '1', datetime('now'))"
+    ).run();
+  }
+
+  // Idempotent redesign upgrade (v6): soften palette & upgrade default photos/copy without overriding custom admin edits
+  const v6RedesignFlag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'espaco_adapta_redesign_v6'")
+    .get() as { value: string } | undefined;
+
+  if (!v6RedesignFlag) {
+    const themeRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'theme'")
+      .get() as { value: string } | undefined;
+    if (themeRow?.value) {
+      try {
+        const parsedTheme = JSON.parse(themeRow.value) as Record<string, string>;
+        if (parsedTheme.forest === '#E04F6D' && parsedTheme.sage === '#F3D0DC') {
+          db.prepare(
+            "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('theme', ?, datetime('now'))"
+          ).run(JSON.stringify(DEFAULT_SITE_SETTINGS.theme));
+        }
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+
+    const imagesRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'images'")
+      .get() as { value: string } | undefined;
+    if (imagesRow?.value) {
+      try {
+        const parsedImages = JSON.parse(imagesRow.value) as Record<string, unknown>;
+        if (
+          parsedImages.heroImage === '/src/assets/images/hero_clinic_speech_therapy_1795193184901.jpg' ||
+          parsedImages.aboutSessionImage === '/src/assets/images/clinic_therapy_session_1795193185634.jpg'
+        ) {
+          db.prepare(
+            "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('images', ?, datetime('now'))"
+          ).run(JSON.stringify(DEFAULT_SITE_SETTINGS.images));
+        }
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+
+    const contentRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'content'")
+      .get() as { value: string } | undefined;
+    if (contentRow?.value) {
+      try {
+        const parsedContent = JSON.parse(contentRow.value) as Record<string, unknown>;
+        let changed = false;
+        if (
+          parsedContent.heroTitle ===
+          'Clínica especializada para atendimento em TEA (Transtorno do Espectro Autista)'
+        ) {
+          parsedContent.heroTitle = DEFAULT_SITE_SETTINGS.content.heroTitle;
+          parsedContent.heroSubtitle = DEFAULT_SITE_SETTINGS.content.heroSubtitle;
+          parsedContent.heroSecondaryButton = DEFAULT_SITE_SETTINGS.content.heroSecondaryButton;
+          parsedContent.introHighlights = DEFAULT_SITE_SETTINGS.content.introHighlights;
+          parsedContent.differentials = DEFAULT_SITE_SETTINGS.content.differentials;
+          changed = true;
+        }
+        if (changed) {
+          db.prepare(
+            "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('content', ?, datetime('now'))"
+          ).run(JSON.stringify(parsedContent));
+        }
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('espaco_adapta_redesign_v6', '1', datetime('now'))"
+    ).run();
+  }
+
+  // Idempotent removal of founders_sumara_samara photo from seeded DBs
+  const v7NoSamaraPhotoFlag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'remove_samara_photo_v7'")
+    .get() as { value: string } | undefined;
+
+  if (!v7NoSamaraPhotoFlag) {
+    const imagesRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'images'")
+      .get() as { value: string } | undefined;
+    if (imagesRow?.value) {
+      try {
+        const parsedImages = JSON.parse(imagesRow.value) as Record<string, unknown>;
+        if (parsedImages.aboutSpaceImage === '/src/assets/images/founders_sumara_samara_1795309875618.jpg') {
+          parsedImages.aboutSpaceImage = DEFAULT_SITE_SETTINGS.images.aboutSpaceImage;
+          db.prepare(
+            "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('images', ?, datetime('now'))"
+          ).run(JSON.stringify(parsedImages));
+        }
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('remove_samara_photo_v7', '1', datetime('now'))"
+    ).run();
+  }
+
+  // Idempotent update of heroImage to uploaded clinic facade photo
+  const v8HeroFacadeFlag = db
+    .prepare("SELECT value FROM site_settings WHERE key = 'hero_facade_frente_v8'")
+    .get() as { value: string } | undefined;
+
+  if (!v8HeroFacadeFlag) {
+    const imagesRow = db
+      .prepare("SELECT value FROM site_settings WHERE key = 'images'")
+      .get() as { value: string } | undefined;
+    if (imagesRow?.value) {
+      try {
+        const parsedImages = JSON.parse(imagesRow.value) as Record<string, unknown>;
+        parsedImages.heroImage = '/assets/aistudio/frente_0dccb97b.jpg';
+        if (Array.isArray(parsedImages.galleryImages)) {
+          parsedImages.galleryImages = parsedImages.galleryImages.map((item) =>
+            item === '/src/assets/images/hero_adapta_clinic_1795309876444.jpg'
+              ? '/assets/aistudio/frente_0dccb97b.jpg'
+              : item
+          );
+        }
+        db.prepare(
+          "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('images', ?, datetime('now'))"
+        ).run(JSON.stringify(parsedImages));
+      } catch {
+        // ignore JSON parse issues
+      }
+    }
+    db.prepare(
+      "INSERT OR REPLACE INTO site_settings (key, value, updated_at) VALUES ('hero_facade_frente_v8', '1', datetime('now'))"
+    ).run();
   }
 }

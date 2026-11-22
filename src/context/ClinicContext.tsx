@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { getFallbackBootstrapData } from '../data/defaultClinicData.ts';
+import { DEFAULT_SITE_SETTINGS, getFallbackBootstrapData } from '../data/defaultClinicData.ts';
 import type { FaqItem, Professional, SiteSettings, Specialty, ThemeColors } from '../types.ts';
 
 interface BootstrapData {
@@ -10,7 +10,7 @@ interface BootstrapData {
   aiConfigured: boolean;
 }
 
-const BOOTSTRAP_CACHE_KEY = 'adaptato_bootstrap_cache_v1';
+const BOOTSTRAP_CACHE_KEY = 'adaptato_bootstrap_cache_v10';
 
 interface ClinicContextValue {
   loading: boolean;
@@ -39,8 +39,38 @@ function applyCssTheme(theme: ThemeColors): void {
   root.style.setProperty('--color-white', theme.white);
   root.style.setProperty('--color-gray-soft', theme.graySoft);
   root.style.setProperty('--color-taupe', theme.taupe);
-  root.style.setProperty('--color-ink', theme.ink || '#243028');
-  root.style.setProperty('--color-ink-muted', theme.inkMuted || '#56524D');
+  root.style.setProperty('--color-ink', theme.ink || '#182235');
+  root.style.setProperty('--color-ink-muted', theme.inkMuted || '#4B5563');
+}
+
+function normalizeBootstrapData(raw: Partial<BootstrapData> | null | undefined): BootstrapData {
+  const fb = getFallbackBootstrapData();
+  const s = raw?.settings;
+  const mergedContent = { ...DEFAULT_SITE_SETTINGS.content, ...(s?.content || {}) };
+  if (!Array.isArray(mergedContent.differentials) || mergedContent.differentials.length === 0) {
+    mergedContent.differentials = DEFAULT_SITE_SETTINGS.content.differentials;
+  }
+  const mergedImages = { ...DEFAULT_SITE_SETTINGS.images, ...(s?.images || {}) };
+  if (!Array.isArray(mergedImages.galleryImages)) {
+    mergedImages.galleryImages = DEFAULT_SITE_SETTINGS.images.galleryImages;
+  } else {
+    mergedImages.galleryImages = mergedImages.galleryImages.filter(
+      (item): item is string => typeof item === 'string' && item.trim().length > 0
+    );
+  }
+  return {
+    settings: {
+      theme: { ...DEFAULT_SITE_SETTINGS.theme, ...(s?.theme || {}) },
+      content: mergedContent,
+      images: mergedImages,
+      contact: { ...DEFAULT_SITE_SETTINGS.contact, ...(s?.contact || {}) },
+      ai: { ...DEFAULT_SITE_SETTINGS.ai, ...(s?.ai || {}) },
+    },
+    specialties: Array.isArray(raw?.specialties) && raw.specialties.length > 0 ? raw.specialties : fb.specialties,
+    professionals: Array.isArray(raw?.professionals) ? raw.professionals : fb.professionals,
+    faqs: Array.isArray(raw?.faqs) ? raw.faqs : fb.faqs,
+    aiConfigured: Boolean(raw?.aiConfigured),
+  };
 }
 
 function readCachedBootstrap(): BootstrapData | null {
@@ -49,7 +79,7 @@ function readCachedBootstrap(): BootstrapData | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as BootstrapData;
     if (parsed?.settings?.content && Array.isArray(parsed.specialties)) {
-      return parsed;
+      return normalizeBootstrapData(parsed);
     }
   } catch {
     // ignore storage errors
@@ -59,48 +89,48 @@ function readCachedBootstrap(): BootstrapData | null {
 
 const PAGE_META: Record<string, { title: string; description: string }> = {
   '/': {
-    title: 'adaptaTO – Clínica de Fonoaudiologia Infantil',
+    title: 'Espaço Adapta T.O – Atendimento TEA e Clínica de Autismo em Cuiabá',
     description:
-      'Comunicação, desenvolvimento e cuidado em cada fase da infância. Atendimento fonoaudiológico exclusivo para crianças na adaptaTO.',
+      'Clínica multidisciplinar especializada em atendimento TEA e autismo em Cuiabá-MT. Atendimento humanizado com ABA, ESDM, CAA, Integração Sensorial e PediaSuit.',
   },
   '/sobre': {
-    title: 'Sobre Nós – adaptaTO Fonoaudiologia Infantil',
+    title: 'Nossa História e Equipe – Espaço Adapta T.O Cuiabá',
     description:
-      'Conheça a missão, visão, valores, filosofia de atendimento infantil e equipe da clínica adaptaTO.',
+      'Conheça a história de fundação por Sumara Najla e Sâmara Ribeiro, nossas abordagens em TEA (ABA, ESDM, CAA, IS, PediaSuit) e equipe clínica.',
   },
   '/especialidades': {
-    title: 'Especialidades – adaptaTO Fonoaudiologia Infantil',
+    title: 'Nossos Serviços em TEA – Espaço Adapta T.O Cuiabá',
     description:
-      'Conheça as áreas de atuação fonoaudiológica infantil da adaptaTO: linguagem, fala, aprendizagem, voz, motricidade orofacial, fluência e orientação familiar.',
+      'Psicologia, Terapia Ocupacional, Psicomotricidade, Psicopedagogia, Musicoterapia, Fonoaudiologia, Fisioterapia, Nutrição e Acompanhamento Terapêutico.',
   },
   '/profissionais': {
-    title: 'Profissionais – adaptaTO Fonoaudiologia Infantil',
+    title: 'Equipe Clínica – Espaço Adapta T.O Cuiabá',
     description:
-      'Conheça os fonoaudiólogos da clínica adaptaTO, suas especialidades infantis e horários disponíveis para atendimento.',
+      'Conheça os profissionais do Espaço Adapta T.O em Cuiabá-MT, suas áreas de atuação, formação e horários disponíveis.',
   },
   '/agendamento': {
-    title: 'Agendamento Online – adaptaTO Fonoaudiologia Infantil',
+    title: 'Agendar Avaliação TEA – Espaço Adapta T.O Cuiabá',
     description:
-      'Solicite o atendimento fonoaudiológico da sua criança escolhendo especialidade, profissional, data e horário disponível.',
+      'Solicite seu agendamento no Espaço Adapta T.O em Cuiabá escolhendo a especialidade desejada para falar diretamente pelo WhatsApp.',
   },
   '/duvidas': {
-    title: 'Dúvidas Frequentes – adaptaTO Fonoaudiologia Infantil',
+    title: 'Dúvidas Frequentes sobre TEA – Espaço Adapta T.O',
     description:
-      'Respostas claras para pais e responsáveis sobre avaliações infantis, agendamentos e privacidade na clínica adaptaTO.',
+      'Orientações para famílias sobre avaliação inicial, terapias em autismo (TEA), unidades Matriz e Filial em Cuiabá e LGPD.',
   },
   '/contato': {
-    title: 'Contato – adaptaTO Fonoaudiologia',
+    title: 'Contato e Unidades em Cuiabá – Espaço Adapta T.O',
     description:
-      'Entre em contato com a clínica adaptaTO por formulário, telefone, e-mail ou WhatsApp.',
+      'Entre em contato com o Espaço Adapta T.O em Cuiabá pelos telefones (65) 99989-3202 / (65) 99233-0091, mapa e formulário rápido.',
   },
   '/privacidade': {
-    title: 'Política de Privacidade e LGPD – adaptaTO Fonoaudiologia',
+    title: 'Política de Privacidade e LGPD – Espaço Adapta T.O',
     description:
-      'Saiba como a clínica adaptaTO protege seus dados pessoais em conformidade com a LGPD.',
+      'Saiba como o Espaço Adapta T.O protege os dados pessoais de crianças e famílias em conformidade com a LGPD.',
   },
   '/admin': {
-    title: 'Painel Administrativo – adaptaTO',
-    description: 'Área restrita da equipe e administração da clínica adaptaTO.',
+    title: 'Painel Administrativo – Espaço Adapta T.O',
+    description: 'Área restrita da administração e equipe do Espaço Adapta T.O.',
   },
 };
 
@@ -118,9 +148,11 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshData = useCallback(async () => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
     try {
       setError(null);
-      const res = await fetch('/api/public/bootstrap');
+      const res = await fetch('/api/public/bootstrap', { signal: controller.signal });
       const contentType = res.headers.get('content-type') || '';
       if (!res.ok || !contentType.includes('application/json')) {
         throw new Error('Servidor indisponível.');
@@ -129,12 +161,13 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
       if (!json?.settings || !Array.isArray(json.specialties)) {
         throw new Error('Resposta inválida do servidor.');
       }
-      setData(json);
-      if (json.settings?.theme) {
-        applyCssTheme(json.settings.theme);
+      const normalized = normalizeBootstrapData(json);
+      setData(normalized);
+      if (normalized.settings?.theme) {
+        applyCssTheme(normalized.settings.theme);
       }
       try {
-        localStorage.setItem(BOOTSTRAP_CACHE_KEY, JSON.stringify(json));
+        localStorage.setItem(BOOTSTRAP_CACHE_KEY, JSON.stringify(normalized));
       } catch {
         // ignore storage quota errors
       }
@@ -146,6 +179,7 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
       }
       setError(null);
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   }, []);
@@ -170,20 +204,51 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
     document.title = meta.title;
     const descEl = document.querySelector('meta[name="description"]');
     if (descEl) descEl.setAttribute('content', meta.description);
+
+    const canonicalHref = `${window.location.origin}${window.location.pathname}`;
+    let canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonicalEl) {
+      canonicalEl = document.createElement('link');
+      canonicalEl.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonicalEl);
+    }
+    canonicalEl.setAttribute('href', canonicalHref);
+
+    const ogUrl = document.querySelector('meta[property="og:url"]');
+    if (ogUrl) ogUrl.setAttribute('content', canonicalHref);
   }, [currentPath]);
 
-  const navigate = useCallback((path: string) => {
-    const parsed = new URL(path, window.location.origin);
-    const fullTarget = `${parsed.pathname}${parsed.search}`;
-    const fullCurrent = `${window.location.pathname}${window.location.search}`;
-    if (fullTarget !== fullCurrent) {
-      window.history.pushState({}, '', fullTarget);
-      setCurrentPath(parsed.pathname || '/');
-    } else if (parsed.pathname !== currentPath) {
-      setCurrentPath(parsed.pathname || '/');
-    }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPath]);
+  const navigate = useCallback(
+    (path: string) => {
+      try {
+        const parsed = new URL(path, window.location.origin);
+        const fullTarget = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+        const fullCurrent = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (fullTarget !== fullCurrent) {
+          window.history.pushState({}, '', fullTarget);
+          setCurrentPath(parsed.pathname || '/');
+        } else if (parsed.pathname !== currentPath) {
+          setCurrentPath(parsed.pathname || '/');
+        }
+
+        if (parsed.hash) {
+          const targetId = parsed.hash.slice(1);
+          window.setTimeout(() => {
+            const el = document.getElementById(targetId);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 90);
+        } else {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } catch {
+        window.history.pushState({}, '', '/');
+        setCurrentPath('/');
+      }
+    },
+    [currentPath]
+  );
 
   const goToBooking = useCallback(
     (opts?: { specialtyId?: number | null; professionalId?: number | null }) => {
@@ -200,10 +265,10 @@ export function ClinicProvider({ children }: { children: React.ReactNode }) {
 
   const buildWhatsAppUrl = useCallback(
     (customMessage?: string) => {
-      const digits = (data?.settings.contact.whatsapp || '11999990000').replace(/\D/g, '');
+      const digits = (data?.settings.contact.whatsapp || '5565999893202').replace(/\D/g, '');
       const phone = digits.startsWith('55') ? digits : `55${digits}`;
       const defaultMsg =
-        'Olá! Conheci a clínica adaptaTO pelo site e gostaria de obter informações sobre os atendimentos e agendar uma consulta.';
+        'Olá! Conheci o Espaço Adapta T.O pelo site e gostaria de obter informações sobre atendimentos em TEA e agendar uma avaliação.';
       const msg = encodeURIComponent(customMessage || defaultMsg);
       return `https://wa.me/${phone}?text=${msg}`;
     },

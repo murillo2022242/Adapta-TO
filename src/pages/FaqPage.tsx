@@ -26,22 +26,22 @@ export function FaqPage() {
 
   return (
     <div className="bg-[var(--color-beige)]">
-      <section className="bg-[var(--color-white)] border-b border-[var(--color-gray-soft)]">
-        <div className="max-w-[960px] mx-auto px-4 sm:px-6 py-16 sm:py-22">
-          <p className="text-xs font-medium tracking-wider uppercase text-[var(--color-taupe)] mb-4">
+      <section className="adaptato-hero-bg border-b border-[var(--color-gray-soft)]">
+        <div className="max-w-[960px] mx-auto px-5 sm:px-6 py-14 sm:py-20">
+          <p className="text-sm font-medium text-[var(--color-forest)] mb-3">
             {data?.settings.content.faqPageKicker || 'Esclarecimentos · Perguntas e respostas'}
           </p>
-          <h1 className="font-display text-3xl sm:text-5xl font-normal text-[var(--color-forest)] tracking-tight leading-[1.12] mb-5">
-            {data?.settings.content.faqPageTitle || 'Dúvidas frequentes'}
+          <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-[var(--color-ink)] tracking-tight leading-[1.12] mb-5">
+            {data?.settings.content.faqPageTitle || 'Dúvidas Frequentes'}
           </h1>
           <p className="text-base sm:text-lg text-[var(--color-ink-muted)] max-w-2xl leading-relaxed">
             {data?.settings.content.faqPageSubtitle ||
-              'Reunimos as principais orientações sobre atendimentos, funcionamento do agendamento e proteção dos seus dados na clínica adaptaTO.'}
+              'Reunimos as principais orientações sobre atendimentos, agendamento e proteção dos seus dados no Espaço Adapta T.O.'}
           </p>
         </div>
       </section>
 
-      <section className="max-w-[960px] mx-auto px-4 sm:px-6 py-12 sm:py-18">
+      <section className="max-w-[960px] mx-auto px-5 sm:px-6 py-12 sm:py-16">
         <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center mb-9">
           <div className="relative flex-1 max-w-md">
             <Search
@@ -70,7 +70,7 @@ export function FaqPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                   category === cat
                     ? 'bg-[var(--color-forest)] text-white'
-                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-forest)]'
+                    : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
                 }`}
               >
                 {cat}
@@ -99,10 +99,10 @@ export function FaqPage() {
                     className="w-full px-7 py-5 text-left flex items-center justify-between gap-4 cursor-pointer"
                   >
                     <div>
-                      <span className="block text-xs text-[var(--color-taupe)] mb-1">
+                      <span className="block text-xs font-medium text-[var(--color-forest)] mb-1">
                         {item.category}
                       </span>
-                      <span className="font-display text-lg font-medium text-[var(--color-forest)]">
+                      <span className="font-display text-lg font-bold text-[var(--color-ink)]">
                         {item.question}
                       </span>
                     </div>
@@ -126,7 +126,7 @@ export function FaqPage() {
 
         <div className="mt-14 p-8 rounded-[24px] bg-[var(--color-white)] border border-[var(--color-gray-soft)] flex flex-col sm:flex-row sm:items-center justify-between gap-5">
           <div>
-            <h2 className="font-display text-2xl font-normal text-[var(--color-forest)]">
+            <h2 className="font-display text-2xl font-bold text-[var(--color-ink)]">
               Ainda ficou com alguma dúvida?
             </h2>
             <p className="text-sm text-[var(--color-ink-muted)] mt-1.5">

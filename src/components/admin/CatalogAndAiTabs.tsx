@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Bot, Check, Pencil, Plus, Save, Trash2, Upload, X } from 'lucide-react';
 import type {
   AuthUser,
@@ -10,6 +10,7 @@ import type {
   Specialty,
 } from '../../types.ts';
 import { ResilientImage, SPECIALTY_ICON_OPTIONS } from '../ClinicIcon.tsx';
+import { adminFetch } from '../../utils/adminAuthFetch.ts';
 
 export function ProfessionalsAndSpecialtiesTab({
   professionals,
@@ -81,7 +82,7 @@ export function ProfessionalsAndSpecialtiesTab({
     setErr(null);
     const reader = new FileReader();
     reader.onload = async () => {
-      const res = await fetch('/api/admin/upload-image', {
+      const res = await adminFetch('/api/admin/upload-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dataUrl: reader.result, filename: file.name, skipEditorLock: true }),
@@ -96,11 +97,16 @@ export function ProfessionalsAndSpecialtiesTab({
       } else if (mode === 'edit') {
         setEditProfForm((p) => (p ? { ...p, photoUrl: json.url } : p));
       } else {
-        await fetch(`/api/admin/professionals/${mode}`, {
+        const updateRes = await adminFetch(`/api/admin/professionals/${mode}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ photoUrl: json.url }),
         });
+        if (!updateRes.ok) {
+          const updateJson = await updateRes.json().catch(() => ({}));
+          setErr(updateJson.error || 'Erro ao salvar foto do profissional.');
+          return;
+        }
         setMsg('Foto do profissional atualizada.');
         await onRefresh();
       }
@@ -125,7 +131,7 @@ export function ProfessionalsAndSpecialtiesTab({
     e.preventDefault();
     if (!editingProfId || !editProfForm) return;
     setErr(null);
-    const res = await fetch(`/api/admin/professionals/${editingProfId}`, {
+    const res = await adminFetch(`/api/admin/professionals/${editingProfId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editProfForm),
@@ -142,8 +148,14 @@ export function ProfessionalsAndSpecialtiesTab({
   };
 
   const deleteProf = async (p: Professional) => {
-    const res = await fetch(`/api/admin/professionals/${p.id}`, { method: 'DELETE' });
-    const json = await res.json();
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch(`/api/admin/professionals/${p.id}`, { method: 'DELETE' });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErr(json.error || `Erro ao remover "${p.name}".`);
+      return;
+    }
     setMsg(json.message || `Profissional "${p.name}" removido/inativado.`);
     await onRefresh();
   };
@@ -157,7 +169,7 @@ export function ProfessionalsAndSpecialtiesTab({
         ? newProf.specialtyIds
         : specialties.filter((s) => s.active).map((s) => s.id);
 
-    const res = await fetch('/api/admin/professionals', {
+    const res = await adminFetch('/api/admin/professionals', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -182,17 +194,23 @@ export function ProfessionalsAndSpecialtiesTab({
       setMsg('Profissional cadastrado com sucesso.');
       await onRefresh();
     } else {
-      const json = await res.json();
+      const json = await res.json().catch(() => ({}));
       setErr(json.error || 'Erro ao cadastrar profissional.');
     }
   };
 
   const toggleProfActive = async (p: Professional) => {
-    await fetch(`/api/admin/professionals/${p.id}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/professionals/${p.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !p.active }),
     });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao alterar status do profissional.');
+      return;
+    }
     await onRefresh();
   };
 
@@ -215,7 +233,8 @@ export function ProfessionalsAndSpecialtiesTab({
   const saveEditSpec = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingSpecId || !editSpecForm) return;
-    const res = await fetch(`/api/admin/specialties/${editingSpecId}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/specialties/${editingSpecId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editSpecForm),
@@ -225,19 +244,29 @@ export function ProfessionalsAndSpecialtiesTab({
       setEditSpecForm(null);
       setMsg('Especialidade atualizada com sucesso.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao atualizar especialidade.');
     }
   };
 
   const deleteSpec = async (s: Specialty) => {
-    const res = await fetch(`/api/admin/specialties/${s.id}`, { method: 'DELETE' });
-    const json = await res.json();
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch(`/api/admin/specialties/${s.id}`, { method: 'DELETE' });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setErr(json.error || `Erro ao remover "${s.name}".`);
+      return;
+    }
     setMsg(json.message || `Especialidade "${s.name}" removida.`);
     await onRefresh();
   };
 
   const createSpecialty = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/specialties', {
+    setErr(null);
+    const res = await adminFetch('/api/admin/specialties', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSpec),
@@ -256,15 +285,24 @@ export function ProfessionalsAndSpecialtiesTab({
       });
       setMsg('Especialidade adicionada.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao adicionar especialidade.');
     }
   };
 
   const toggleSpecStatus = async (s: Specialty, patch: Partial<Specialty>) => {
-    await fetch(`/api/admin/specialties/${s.id}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/specialties/${s.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(patch),
     });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || `Erro ao atualizar "${s.name}".`);
+      return;
+    }
     setMsg(`Especialidade "${s.name}" atualizada.`);
     await onRefresh();
   };
@@ -869,6 +907,11 @@ export function AiAndFaqTab({
 }) {
   const [aiForm, setAiForm] = useState(settings.ai);
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setAiForm(settings.ai);
+  }, [settings.ai]);
 
   const [newKb, setNewKb] = useState({ title: '', category: 'Institucional', content: '' });
   const [editingKbId, setEditingKbId] = useState<number | null>(null);
@@ -886,7 +929,9 @@ export function AiAndFaqTab({
 
   const saveAiConfig = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/settings', {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch('/api/admin/settings', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ai: aiForm }),
@@ -894,12 +939,17 @@ export function AiAndFaqTab({
     if (res.ok) {
       setMsg('Configurações do Assistente adaptaTO salvas.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao salvar configuração da IA.');
     }
   };
 
   const addKnowledge = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/knowledge', {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch('/api/admin/knowledge', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newKb),
@@ -908,13 +958,17 @@ export function AiAndFaqTab({
       setNewKb({ title: '', category: 'Institucional', content: '' });
       setMsg('Informação adicionada à base de conhecimento da IA.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao adicionar item à base de conhecimento.');
     }
   };
 
   const saveEditKnowledge = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingKbId) return;
-    const res = await fetch(`/api/admin/knowledge/${editingKbId}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/knowledge/${editingKbId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editKb),
@@ -923,17 +977,28 @@ export function AiAndFaqTab({
       setEditingKbId(null);
       setMsg('Item da base de conhecimento atualizado.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao atualizar item.');
     }
   };
 
   const deleteKnowledge = async (id: number) => {
-    await fetch(`/api/admin/knowledge/${id}`, { method: 'DELETE' });
+    setErr(null);
+    const res = await adminFetch(`/api/admin/knowledge/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao excluir item.');
+      return;
+    }
     await onRefresh();
   };
 
   const addFaq = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/faqs', {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch('/api/admin/faqs', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newFaq),
@@ -942,13 +1007,17 @@ export function AiAndFaqTab({
       setNewFaq({ question: '', answer: '', category: 'Geral' });
       setMsg('Pergunta frequente cadastrada.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao cadastrar dúvida frequente.');
     }
   };
 
   const saveEditFaq = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingFaqId) return;
-    const res = await fetch(`/api/admin/faqs/${editingFaqId}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/faqs/${editingFaqId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editFaq),
@@ -957,19 +1026,39 @@ export function AiAndFaqTab({
       setEditingFaqId(null);
       setMsg('Dúvida frequente atualizada.');
       await onRefresh();
+    } else {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao atualizar dúvida frequente.');
     }
   };
 
   const deleteFaq = async (id: number) => {
-    await fetch(`/api/admin/faqs/${id}`, { method: 'DELETE' });
+    setErr(null);
+    const res = await adminFetch(`/api/admin/faqs/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao excluir dúvida frequente.');
+      return;
+    }
     await onRefresh();
   };
 
   return (
     <div className="space-y-8">
       {msg && (
-        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
-          {msg}
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm flex items-center justify-between">
+          <span>{msg}</span>
+          <button type="button" onClick={() => setMsg(null)} className="cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {err && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-center justify-between">
+          <span>{err}</span>
+          <button type="button" onClick={() => setErr(null)} className="cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -986,7 +1075,8 @@ export function AiAndFaqTab({
             </h2>
             <p className="text-xs text-[var(--color-ink-muted)] mt-1">
               O provedor de IA opera no servidor seguro usando as credenciais de ambiente da
-              plataforma, consultando exclusivamente a base cadastrada da clínica.
+              plataforma, respondendo a todas as perguntas dos visitantes e priorizando os dados
+              oficiais cadastrados da clínica.
             </p>
           </div>
           <span
@@ -1035,7 +1125,7 @@ export function AiAndFaqTab({
           </div>
           <div className="md:col-span-2">
             <label className="block text-xs font-medium text-[var(--color-forest)] mb-1">
-              Orientações complementares para a IA (regras clínicas de segurança permanecem sempre ativas)
+              Orientações complementares para a IA (regras específicas da clínica ou tom de atendimento)
             </label>
             <textarea
               rows={2}
@@ -1336,6 +1426,7 @@ export function ContactsAndUsersTab({
   onRefresh: () => Promise<void>;
 }) {
   const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
   const [curPass, setCurPass] = useState('');
   const [newPass, setNewPass] = useState('');
 
@@ -1348,42 +1439,61 @@ export function ContactsAndUsersTab({
   });
 
   const markContactDone = async (id: number) => {
-    await fetch(`/api/admin/contacts/${id}`, {
+    setErr(null);
+    const res = await adminFetch(`/api/admin/contacts/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'respondido' }),
     });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao atualizar contato.');
+      return;
+    }
     await onRefresh();
   };
 
   const toggleUserActive = async (u: AuthUser) => {
-    await fetch(`/api/admin/users/${u.id}`, {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch(`/api/admin/users/${u.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !u.active }),
     });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setErr(json.error || 'Erro ao atualizar status do usuário.');
+      return;
+    }
     setMsg(`Acesso de ${u.name} ${!u.active ? 'ativado' : 'desativado'}.`);
     await onRefresh();
   };
 
   const changeOwnPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/auth/change-password', {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch('/api/auth/change-password', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ currentPassword: curPass, newPassword: newPass }),
     });
-    const json = await res.json();
-    setMsg(json.message || json.error);
+    const json = await res.json().catch(() => ({}));
     if (res.ok) {
+      setMsg(json.message || 'Senha atualizada com sucesso.');
       setCurPass('');
       setNewPass('');
+    } else {
+      setErr(json.error || 'Erro ao alterar senha.');
     }
   };
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/admin/users', {
+    setErr(null);
+    setMsg(null);
+    const res = await adminFetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1391,9 +1501,9 @@ export function ContactsAndUsersTab({
         professionalId: newUser.professionalId ? Number(newUser.professionalId) : null,
       }),
     });
-    const json = await res.json();
+    const json = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setMsg(json.error);
+      setErr(json.error || 'Erro ao criar usuário.');
       return;
     }
     setNewUser({ name: '', email: '', password: '', role: 'professional', professionalId: '' });
@@ -1404,8 +1514,19 @@ export function ContactsAndUsersTab({
   return (
     <div className="space-y-8">
       {msg && (
-        <div className="p-3.5 rounded-xl bg-[var(--color-white)] border border-[var(--color-sage)] text-sm text-[var(--color-forest)]">
-          {msg}
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-sm text-emerald-900 flex items-center justify-between">
+          <span>{msg}</span>
+          <button type="button" onClick={() => setMsg(null)} className="cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {err && (
+        <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800 flex items-center justify-between">
+          <span>{err}</span>
+          <button type="button" onClick={() => setErr(null)} className="cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
@@ -1587,3 +1708,4 @@ export function ContactsAndUsersTab({
     </div>
   );
 }
+

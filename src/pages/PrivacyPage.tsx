@@ -3,30 +3,30 @@ import { useClinic } from '../context/ClinicContext.tsx';
 
 export function PrivacyPage() {
   const { data } = useClinic();
-  const clinicName = data?.settings.content.clinicName || 'adaptaTO';
-  const contactEmail = data?.settings.contact.email || 'contato@adaptato.com.br';
+  const clinicName = data?.settings.content.clinicName || 'Espaço Adapta T.O';
+  const contactEmail = data?.settings.contact.email || 'espacoadaptatocomercial@hotmail.com';
 
   return (
     <div className="bg-[var(--color-beige)]">
-      <section className="bg-[var(--color-white)] border-b border-[var(--color-gray-soft)]">
-        <div className="max-w-[900px] mx-auto px-4 sm:px-6 py-16 sm:py-22">
-          <p className="text-xs font-medium tracking-wider uppercase text-[var(--color-taupe)] mb-4">
+      <section className="adaptato-hero-bg border-b border-[var(--color-gray-soft)]">
+        <div className="max-w-[900px] mx-auto px-5 sm:px-6 py-14 sm:py-20">
+          <p className="text-sm font-medium text-[var(--color-forest)] mb-3">
             {data?.settings.content.privacyPageKicker || 'Transparência e segurança · LGPD'}
           </p>
-          <h1 className="font-display text-3xl sm:text-5xl font-normal text-[var(--color-forest)] tracking-tight leading-[1.12] mb-5">
+          <h1 className="font-display text-3xl sm:text-5xl font-extrabold text-[var(--color-ink)] tracking-tight leading-[1.12] mb-5">
             {data?.settings.content.privacyPageTitle || 'Política de Privacidade'}
           </h1>
           <p className="text-base text-[var(--color-ink-muted)] leading-relaxed">
             {data?.settings.content.privacyPageSubtitle ||
-              `Tratamento de dados pessoais da clínica de fonoaudiologia ${clinicName} em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).`}
+              `Tratamento de dados pessoais da clínica ${clinicName} em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).`}
           </p>
         </div>
       </section>
 
-      <section className="max-w-[900px] mx-auto px-4 sm:px-6 py-14 sm:py-20">
-        <article className="bg-[var(--color-white)] border border-[var(--color-gray-soft)] rounded-[24px] p-8 sm:p-12 space-y-8 text-sm sm:text-base text-[var(--color-ink-muted)] leading-relaxed">
+      <section className="max-w-[900px] mx-auto px-5 sm:px-6 py-14 sm:py-20">
+        <article className="bg-[var(--color-white)] border border-[var(--color-gray-soft)] rounded-2xl p-8 sm:p-12 space-y-8 text-sm sm:text-base text-[var(--color-ink-muted)] leading-relaxed">
           <div>
-            <h2 className="font-display text-xl font-medium text-[var(--color-forest)] mb-2.5">
+            <h2 className="font-display text-xl font-bold text-[var(--color-ink)] mb-2.5">
               1. Coleta mínima de dados
             </h2>
             <p>
@@ -39,7 +39,7 @@ export function PrivacyPage() {
           </div>
 
           <div className="pt-6 border-t border-[var(--color-gray-soft)]">
-            <h2 className="font-display text-xl font-medium text-[var(--color-forest)] mb-2.5">
+            <h2 className="font-display text-xl font-bold text-[var(--color-ink)] mb-2.5">
               2. Finalidade do uso das informações
             </h2>
             <p>
@@ -51,19 +51,20 @@ export function PrivacyPage() {
           </div>
 
           <div className="pt-6 border-t border-[var(--color-gray-soft)]">
-            <h2 className="font-display text-xl font-medium text-[var(--color-forest)] mb-2.5">
+            <h2 className="font-display text-xl font-bold text-[var(--color-ink)] mb-2.5">
               3. Assistente Virtual (IA) e WhatsApp
             </h2>
             <p>
               As conversas com o assistente virtual têm caráter informativo e ocorrem durante a
               sessão de navegação sem armazenar histórico médico. Ao optar pelo redirecionamento
-              para o WhatsApp oficial da clínica, são compartilhados apenas os dados básicos de
-              identificação da solicitação (nome, atendimento, profissional, data e horário).
+              para o WhatsApp oficial da clínica, são compartilhados apenas os dados informados por
+              você na solicitação (como a especialidade escolhida no agendamento ou os dados da sua
+              mensagem de contato).
             </p>
           </div>
 
           <div className="pt-6 border-t border-[var(--color-gray-soft)]">
-            <h2 className="font-display text-xl font-medium text-[var(--color-forest)] mb-2.5">
+            <h2 className="font-display text-xl font-bold text-[var(--color-ink)] mb-2.5">
               4. Segurança e controle de acesso
             </h2>
             <p>
@@ -75,7 +76,7 @@ export function PrivacyPage() {
           </div>
 
           <div className="pt-6 border-t border-[var(--color-gray-soft)]">
-            <h2 className="font-display text-xl font-medium text-[var(--color-forest)] mb-2.5">
+            <h2 className="font-display text-xl font-bold text-[var(--color-ink)] mb-2.5">
               5. Direitos do titular
             </h2>
             <p>

@@ -1,128 +1,130 @@
 import type {
   DayAvailabilitySummary,
   FaqItem,
+  LiveScheduleDay,
   Professional,
   SiteSettings,
+  SlotDetail,
   Specialty,
   WeeklySchedule,
 } from '../types.ts';
 
 export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   theme: {
-    sage: '#A8BDA8',
-    forest: '#526B5B',
-    beige: '#F6F2EA',
+    sage: '#E6DCEB',
+    forest: '#C95874',
+    beige: '#FAF9FC',
     white: '#FFFFFF',
-    graySoft: '#E9E9E5',
-    taupe: '#817568',
-    ink: '#243028',
-    inkMuted: '#56524D',
+    graySoft: '#E5E7EB',
+    taupe: '#64748B',
+    ink: '#1F2937',
+    inkMuted: '#4B5563',
   },
   content: {
-    clinicName: 'adaptaTO',
-    headerCtaText: 'Agendar consulta',
-    heroKicker: 'Fonoaudiologia Infantil · Atendimento Humanizado',
-    heroTitle: 'Comunicação, desenvolvimento e cuidado em cada fase da infância.',
+    clinicName: 'Espaço Adapta T.O',
+    headerCtaText: 'Agendar Avaliação',
+    heroKicker: 'Espaço Adapta T.O · Cuiabá/MT',
+    heroTitle: 'Clínica Multidisciplinar Especializada em TEA',
     heroSubtitle:
-      'Na adaptaTO, acreditamos que cada criança tem seu próprio ritmo. Oferecemos atendimento fonoaudiológico infantil humanizado, individualizado e focado no desenvolvimento de cada paciente junto à sua família.',
-    heroPrimaryButton: 'Agendar atendimento',
-    heroSecondaryButton: 'Conheça nossa clínica',
-    introKicker: 'Nossa proposta de cuidado infantil',
-    introTitle: 'O desenvolvimento da sua criança merece atenção especial.',
+      'Espaço Adapta T.O – Atendimento humanizado, personalizado e baseado em evidências. Desenvolvimento, autonomia e qualidade de vida para cada pessoa.',
+    heroPrimaryButton: 'Agendar Avaliação',
+    heroSecondaryButton: 'Conhecer Nossos Serviços',
+    introKicker: 'Nossa Missão e Diferenciais',
+    introTitle: 'Sobre o Espaço Adapta T.O',
     introText:
-      'A clínica adaptaTO nasce com o propósito de acolher bebês, crianças e suas famílias em um espaço tranquilo e lúdico, preparado para escutar, avaliar e acompanhar cada etapa da comunicação infantil com respeito, ética e embasamento clínico.',
-    introHighlights: 'Avaliação infantil cuidadosa · Escuta às famílias · Respeito a cada fase',
-    specialtiesSectionKicker: 'Áreas de atuação infantil',
-    specialtiesSectionTitle: 'Especialidades em fonoaudiologia infantil',
-    differentialsKicker: 'Nossos diferenciais',
-    differentialsTitle: 'Um cuidado pensado para cada infância',
+      'Somos um espaço acolhedor dedicado ao atendimento especializado de pessoas com Transtorno do Espectro Autista (TEA) em Cuiabá/MT. Caminhamos ao lado de cada família com respeito, escuta ativa e intervenções baseadas em evidências científicas.',
+    introHighlights:
+      'Atendimento Humanizado · Equipe Multidisciplinar · Atendimento Personalizado',
+    specialtiesSectionKicker: 'Áreas de atuação multidisciplinar',
+    specialtiesSectionTitle: 'Nossos Serviços',
+    differentialsKicker: 'Nossa Missão e Diferenciais',
+    differentialsTitle: 'Cuidado completo para o desenvolvimento e autonomia',
     differentials: [
       {
-        title: 'Atendimento humanizado',
+        title: 'Atendimento Humanizado',
         description:
-          'Escuta acolhedora, empatia e respeito à história e às particularidades de cada criança e sua família desde o primeiro contato.',
+          'Respeito, acolhimento e empatia para cada família em todas as etapas do cuidado.',
       },
       {
-        title: 'Acompanhamento individualizado',
+        title: 'Equipe Multidisciplinar',
         description:
-          'Planos terapêuticos construídos sob medida após avaliação clínica cuidadosa, respeitando o tempo e os interesses de cada criança.',
+          'Profissionais especializados trabalhando juntos com foco integral em cada criança e jovem.',
       },
       {
-        title: 'Ambiente acolhedor',
+        title: 'Atendimento Personalizado',
         description:
-          'Consultórios preparados para transmitir tranquilidade, conforto sensorial, ludicidade e segurança para bebês e crianças.',
-      },
-      {
-        title: 'Profissionais qualificados',
-        description:
-          'Equipe dedicada à fonoaudiologia infantil, comprometida com ética profissional, atualização científica contínua e prática responsável.',
-      },
-      {
-        title: 'Orientação às famílias',
-        description:
-          'Parceria transparente com pais, responsáveis e escolas para apoiar o desenvolvimento comunicativo no cotidiano da criança.',
+          'Estratégias adaptadas para as necessidades, ritmo e potencialidades de cada paciente.',
       },
     ],
-    ctaTitle: 'Vamos dar o próximo passo juntos?',
+    ctaTitle: 'Agende sua Consulta',
     ctaSubtitle:
-      'Fale diretamente com nossa equipe pelo WhatsApp ou solicite um horário infantil pelo sistema de agendamento do site.',
-    ctaButtonText: 'Agende seu atendimento pelo WhatsApp',
-    aboutKicker: 'Institucional · Sobre a clínica',
-    aboutPageTitle: 'Cuidado fonoaudiológico infantil com acolhimento, escuta e responsabilidade clínica.',
+      'Nossa equipe está pronta para acolher sua família com calma e respeito. Solicite uma avaliação inicial ou envie uma mensagem pelo WhatsApp.',
+    ctaButtonText: 'Agendar Avaliação',
+    aboutKicker: 'Institucional · Nossa História e Equipe',
+    aboutPageTitle:
+      'Cuidado especializado, humanizado e baseado em evidências para pessoas com TEA em Cuiabá.',
     aboutHistory:
-      '[Texto provisório editável] A clínica adaptaTO foi idealizada para oferecer um atendimento fonoaudiológico infantil próximo, sereno e personalizado. Este espaço está pronto para receber a história oficial da clínica, sua trajetória de fundação e marcos importantes diretamente pelo painel administrativo.',
+      'Sou Sumara Najla, Terapeuta Ocupacional, e tudo começou em 2019, quando decidi alugar uma pequena sala com o propósito de atender crianças com atraso no desenvolvimento. Desde o início, o foco sempre foi oferecer um cuidado acolhedor, técnico e individualizado, respeitando a singularidade de cada criança.\n\nCom o passar do tempo e o crescimento da demanda, percebemos que apenas uma especialidade não era suficiente para atender todas as necessidades das famílias. Assim, o espaço começou a se ampliar: primeiro com a chegada da Psicologia, depois com a Fonoaudiologia, dando origem a uma equipe multidisciplinar integrada.\n\nEm um determinado momento, o crescimento exigiu um passo ainda maior. Foi então que convidei minha irmã e atual sócia, Sâmara Ribeiro, para assumir a coordenação administrativa da clínica, enquanto eu permanecia dedicada ao atendimento clínico e à supervisão técnica. Essa parceria foi essencial para estruturar e fortalecer ainda mais o nosso propósito.\n\nHoje, o Espaço Adapta T.O conta com duas unidades e um corpo clínico completo com diversas especialidades: Psicologia, Terapia Ocupacional, Fonoaudiologia, Psicomotricidade, Psicopedagogia, Fisioterapia, Nutrição, Musicoterapia e Acompanhamento Terapêutico. Cada detalhe da clínica continua sendo pensado com cuidado, ética e dedicação para promover desenvolvimento, autonomia e qualidade de vida às famílias que atendemos.',
     aboutMission:
-      '[Editável] Promover o desenvolvimento da comunicação na infância com acolhimento, ludicidade, escuta ativa e prática fonoaudiológica baseada em evidências, respeitando a singularidade de cada criança.',
+      'Promover o desenvolvimento integral de pessoas com TEA através de intervenções terapêuticas especializadas, respeitando a individualidade e potencializando as habilidades de cada pessoa.',
     aboutVision:
-      '[Editável] Ser referência em cuidado fonoaudiológico infantil humanizado, construindo vínculos de confiança duradouros com crianças, familiares e equipes escolares e interdisciplinares.',
+      'Ser referência em atendimento TEA e clínica de autismo em Cuiabá, construindo evolução contínua, autonomia e confiança junto às famílias.',
     aboutValues:
-      'Acolhimento e respeito ao ritmo infantil; Ética e sigilo profissional; Atualização científica contínua; Parceria transparente com as famílias; Acessibilidade e inclusão.',
+      'Atendimento humanizado e respeitoso; Equipe multidisciplinar integrada; Prática baseada em evidências científicas (ABA, ESDM, CAA, IS e PediaSuit); Atendimento personalizado; Ética e parceria com as famílias.',
     aboutPhilosophy:
-      'Acreditamos que cada conquista na fala, na linguagem, na comunicação ou nas funções orofaciais da criança acontece de forma mais consistente quando há vínculo afetivo, ludicidade, clareza nos objetivos e orientação contínua aos pais e cuidadores.',
+      'Cada pessoa com TEA é única, com suas próprias características, habilidades e necessidades. Por isso, nosso atendimento é sempre personalizado, respeitoso e planejado em equipe multidisciplinar.',
     aboutNotice:
-      'As informações institucionais e perfis abaixo são modelos editáveis e podem ser atualizados pela administração da clínica no painel protegido por senha.',
-    aboutTeamKicker: 'Nossa equipe',
-    aboutTeamTitle: 'Profissionais dedicados ao desenvolvimento infantil',
-    specialtiesPageKicker: 'Serviços e áreas de atuação infantil',
-    specialtiesPageTitle: 'Especialidades em fonoaudiologia infantil',
+      'Sou grata a cada profissional que faz parte do nosso corpo clínico e a cada família que confia em nós. Seguimos firmes nessa missão, guiadas por Deus. — Sumara Najla, Fundadora',
+    aboutTeamKicker: 'Corpo clínico multidisciplinar',
+    aboutTeamTitle: 'Nossa História e Equipe',
+    specialtiesPageKicker: 'Atendimento multidisciplinar em TEA',
+    specialtiesPageTitle: 'Nossos Serviços',
     specialtiesPageSubtitle:
-      'Conheça as áreas voltadas ao público infantil cadastradas pela clínica adaptaTO. Cada atendimento inicia com uma avaliação individualizada para compreender as necessidades reais da criança e orientar a família.',
-    professionalsPageKicker: 'Equipe clínica infantil',
-    professionalsPageTitle: 'Nossos profissionais',
+      'Contamos com 9 especialidades integradas para oferecer acompanhamento terapêutico completo, humanizado e personalizado para crianças e pessoas com TEA em Cuiabá.',
+    professionalsPageKicker: 'Equipe clínica',
+    professionalsPageTitle: 'Nossa Equipe',
     professionalsPageSubtitle:
-      'Conheça os fonoaudiólogos cadastrados na clínica adaptaTO, suas áreas de atuação infantil e horários disponíveis para atendimento.',
-    bookingPageKicker: 'Agendamento infantil online · Solicitação em 6 etapas',
-    bookingPageTitle: 'Solicite o atendimento da sua criança',
+      'Conheça os profissionais do Espaço Adapta T.O, suas áreas de atuação, formação e horários disponíveis.',
+    bookingPageKicker: 'Agendamento Online · Espaço Adapta T.O',
+    bookingPageTitle: 'Agende sua Consulta',
     bookingPageSubtitle:
-      'Escolha o tipo de atendimento infantil, profissional, data e horário disponíveis para enviar sua solicitação à nossa equipe.',
+      'Escolha a especialidade desejada e fale diretamente com nossa equipe pelo WhatsApp para agendar sua avaliação.',
     faqPageKicker: 'Esclarecimentos · Perguntas e respostas',
-    faqPageTitle: 'Dúvidas frequentes',
+    faqPageTitle: 'Dúvidas Frequentes',
     faqPageSubtitle:
-      'Reunimos as principais orientações para pais e responsáveis sobre avaliações infantis, agendamentos e proteção de dados na clínica adaptaTO.',
-    contactPageKicker: 'Atendimento e suporte',
-    contactPageTitle: 'Fale com a adaptaTO',
+      'Reunimos as principais orientações para pais e responsáveis sobre avaliação inicial, terapias em TEA e agendamentos no Espaço Adapta T.O.',
+    contactPageKicker: 'Atendimento e unidades em Cuiabá/MT',
+    contactPageTitle: 'Entre em Contato',
     contactPageSubtitle:
-      'Estamos à disposição para tirar dúvidas dos pais e responsáveis sobre especialidades infantis, horários ou funcionamento da clínica.',
+      'Estamos prontos para ajudar sua família. Entre em contato conosco para agendar uma avaliação ou esclarecer suas dúvidas.',
     privacyPageKicker: 'Transparência e segurança · LGPD',
     privacyPageTitle: 'Política de Privacidade',
     privacyPageSubtitle:
-      'Tratamento de dados pessoais da clínica de fonoaudiologia infantil em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).',
+      'Tratamento de dados pessoais do Espaço Adapta T.O em conformidade com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018).',
     footerTagline:
-      'Clínica de fonoaudiologia infantil dedicada ao cuidado humanizado da comunicação e do desenvolvimento na infância.',
-    footerBottomText: 'Fonoaudiologia infantil humanizada · Dados tratados conforme a LGPD',
+      'Clínica multidisciplinar especializada em atendimento TEA em Cuiabá-MT. Cuidado calmo, humanizado e baseado em evidências.',
+    footerBottomText:
+      'Espaço Adapta T.O · Cuiabá/MT · Dados tratados conforme a LGPD',
   },
   images: {
-    heroImage: '/src/assets/images/hero_clinic_speech_therapy_1795193184901.jpg',
+    heroImage: '/assets/aistudio/frente_0dccb97b.jpg',
     aboutSpaceImage: '/src/assets/images/clinic_space_accueil_1795193185344.jpg',
-    aboutSessionImage: '/src/assets/images/clinic_therapy_session_1795193185634.jpg',
-    specialtiesBannerImage: '/src/assets/images/clinic_therapy_session_1795193185634.jpg',
+    aboutSessionImage: '/src/assets/images/sensory_integration_room_1795309877103.jpg',
+    specialtiesBannerImage: '/src/assets/images/hero_clinic_speech_therapy_1795193184901.jpg',
+    galleryImages: [
+      '/src/assets/images/sensory_integration_room_1795309877103.jpg',
+      '/assets/aistudio/frente_0dccb97b.jpg',
+      '/src/assets/images/clinic_space_accueil_1795193185344.jpg',
+      '/src/assets/images/hero_clinic_speech_therapy_1795193184901.jpg',
+    ],
   },
   contact: {
-    address: 'Endereço oficial a confirmar pela clínica (editável no painel administrativo)',
-    phone: '(00) 0000-0000',
-    whatsapp: '11999990000',
-    email: 'contato@adaptato.com.br',
-    hours: 'Segunda a Sexta, das 07h30 às 20h00 · Sábado, das 08h00 às 13h00',
+    address:
+      'Matriz: Rua Major Gama, 950, Centro Sul - Cuiabá/MT | Filial: Rua Barão de Melgaço, 2350, Edifício Barão Center, Sala 104, Centro Sul - Cuiabá/MT',
+    phone: '(65) 99989-3202 · (65) 99233-0091',
+    whatsapp: '5565999893202',
+    email: 'espacoadaptatocomercial@hotmail.com',
+    hours: 'Seg à Sex: 8h às 18h',
     instagram: 'https://instagram.com',
     facebook: '',
     linkedin: '',
@@ -133,215 +135,198 @@ export const DEFAULT_SITE_SETTINGS: SiteSettings = {
   },
   ai: {
     enabled: true,
-    assistantName: 'Assistente adaptaTO',
+    assistantName: 'Assistente Adapta T.O',
     welcomeMessage:
-      'Olá! Sou o assistente virtual da adaptaTO, clínica de fonoaudiologia exclusiva para crianças. Como posso ajudar você e sua família hoje?',
+      'Olá! Sou o assistente virtual inteligente do Espaço Adapta T.O. Pode perguntar qualquer coisa — sobre nossa clínica em Cuiabá, TEA, terapias ou qualquer outro assunto que precisar!',
     customInstructions:
-      'Reforce sempre que a clínica atende exclusivamente bebês e crianças (fonoaudiologia infantil). Priorize respostas claras, acolhedoras e objetivas para pais e responsáveis.',
+      'O Espaço Adapta T.O é uma clínica especializada no atendimento multidisciplinar em Transtorno do Espectro Autista (TEA) em Cuiabá/MT (Matriz na Rua Major Gama, 950, Centro Sul e Filial na Rua Barão de Melgaço, 2350, Sala 104). Possui 9 especialidades: Psicologia, Terapia Ocupacional, Psicomotricidade, Psicopedagogia, Musicoterapia, Fonoaudiologia, Fisioterapia, Nutrição e Acompanhamento Terapêutico. Horário: Segunda a Sexta das 8h às 18h.',
   },
 };
 
 export const DEFAULT_WEEKLY_SCHEDULE: WeeklySchedule = {
   '0': { enabled: false, start: '08:00', end: '12:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
-  '1': { enabled: true, start: '07:30', end: '20:00', breakStart: '12:00', breakEnd: '13:00', slotMinutes: 30 },
-  '2': { enabled: true, start: '07:30', end: '20:00', breakStart: '12:00', breakEnd: '13:00', slotMinutes: 30 },
-  '3': { enabled: true, start: '07:30', end: '20:00', breakStart: '12:00', breakEnd: '13:00', slotMinutes: 30 },
-  '4': { enabled: true, start: '07:30', end: '20:00', breakStart: '12:00', breakEnd: '13:00', slotMinutes: 30 },
-  '5': { enabled: true, start: '07:30', end: '20:00', breakStart: '12:00', breakEnd: '13:00', slotMinutes: 30 },
-  '6': { enabled: true, start: '08:00', end: '13:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '1': { enabled: true, start: '08:00', end: '18:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '2': { enabled: true, start: '08:00', end: '18:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '3': { enabled: true, start: '08:00', end: '18:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '4': { enabled: true, start: '08:00', end: '18:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '5': { enabled: true, start: '08:00', end: '18:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
+  '6': { enabled: false, start: '08:00', end: '12:00', breakStart: '', breakEnd: '', slotMinutes: 30 },
 };
 
 export const PEDIATRIC_SPECIALTIES: Array<Omit<Specialty, 'id' | 'active'> & { active: number }> = [
   {
-    slug: 'linguagem-infantil',
-    name: 'Linguagem Infantil',
-    icon: 'Baby',
+    slug: 'psicologia',
+    name: 'Psicologia',
+    icon: 'Brain',
     shortDescription:
-      'Acompanhamento do desenvolvimento da fala, compreensão e comunicação na infância com abordagem acolhedora e lúdica.',
+      'Acompanhamento psicológico especializado para desenvolvimento emocional e comportamental.',
     fullDescription:
-      'Atendimento focado em observar e estimular o desenvolvimento da linguagem oral e compreensiva em bebês e crianças, respeitando o tempo singular de cada faixa etária e envolvendo a família no processo.',
-    targetAudience: 'Bebês, crianças em idade pré-escolar e escolar (mediante avaliação clínica).',
+      'Atendimento psicológico especializado voltado ao desenvolvimento emocional, social e comportamental de crianças e pessoas com TEA, utilizando abordagens baseadas em evidências científicas como a Análise do Comportamento Aplicada (ABA).',
+    targetAudience: 'Crianças e jovens no espectro autista ou com necessidades do neurodesenvolvimento.',
     objectives:
-      'Ampliar o vocabulário, favorecer a compreensão, estimular a intenção comunicativa e apoiar a construção de frases funcionais no dia a dia.',
+      'Desenvolver regulação emocional, habilidades sociais, autonomia comportamental e repertório adaptativo no cotidiano familiar e escolar.',
     howItWorks:
-      'Inicia-se com entrevista familiar e avaliação fonoaudiológica infantil individualizada para definir objetivos e frequência de sessões junto aos responsáveis.',
+      'Inicia-se com avaliação comportamental e entrevista com os pais para elaboração do plano de intervenção individualizado.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 1,
   },
   {
-    slug: 'leitura-e-escrita-infantil',
-    name: 'Leitura, Escrita e Aprendizagem',
-    icon: 'BookOpen',
+    slug: 'terapia-ocupacional',
+    name: 'Terapia Ocupacional',
+    icon: 'Hand',
     shortDescription:
-      'Apoio fonoaudiológico infantil para consciência fonológica, alfabetização, compreensão leitora e expressão escrita.',
+      'Desenvolvimento de habilidades para atividades da vida diária e autonomia.',
     fullDescription:
-      'Acompanhamento especializado voltado a crianças em fase de alfabetização ou ensino fundamental que apresentam dificuldades na relação entre sons e letras, fluência de leitura ou organização da escrita.',
-    targetAudience: 'Crianças em idade pré-escolar e escolar (conforme avaliação fonoaudiológica).',
+      'Intervenção especializada em Terapia Ocupacional e Integração Sensorial (IS) para promover independência nas atividades da vida diária, coordenação motora fina, regulação sensorial e participação ativa em todos os ambientes.',
+    targetAudience: 'Crianças com desafios sensoriais, motores ou na autonomia do dia a dia.',
     objectives:
-      'Fortalecer o processamento fonológico, a consciência dos sons, a decodificação leitora e a confiança da criança nas atividades escolares.',
+      'Promover independência funcional, organização sensorial, brincar estruturado e habilidades motoras para a rotina diária.',
     howItWorks:
-      'Após avaliação inicial lúdica e estruturada, realizamos sessões individuais alinhadas com orientações práticas para família e escola.',
+      'Avaliação do perfil sensorial e ocupacional seguida de sessões em salas preparadas com recursos específicos de integração sensorial.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 2,
   },
   {
-    slug: 'desenvolvimento-da-comunicacao',
-    name: 'Desenvolvimento da Comunicação',
-    icon: 'Sparkles',
+    slug: 'psicomotricidade',
+    name: 'Psicomotricidade',
+    icon: 'Activity',
     shortDescription:
-      'Intervenção infantil focada em interação social, troca de turnos, atenção compartilhada e comunicação funcional.',
+      'Estímulo ao desenvolvimento motor, cognitivo e afetivo através do movimento.',
     fullDescription:
-      'Trabalho direcionado a fortalecer diferentes formas da criança se comunicar, incluindo gestos, expressões, comunicação verbal e recursos de comunicação alternativa quando indicados.',
-    targetAudience: 'Bebês e crianças com atrasos ou necessidades específicas na comunicação e interação.',
+      'Acompanhamento psicomotor que integra movimento, cognição e afetividade, favorecendo a consciência corporal, equilíbrio, organização espacial e planejamento motor de forma lúdica.',
+    targetAudience: 'Crianças com TEA ou atrasos no desenvolvimento psicomotor.',
     objectives:
-      'Promover comunicação funcional, autonomia nas interações e participação ativa nos ambientes familiar e escolar.',
+      'Ampliar esquema corporal, equilíbrio, coordenação motora global, atenção e expressão por meio do brincar e do movimento.',
     howItWorks:
-      'Atendimento lúdico e personalizado em parceria constante com familiares, cuidadores e escola, respeitando o perfil sensorial de cada criança.',
+      'Sessões dinâmicas e lúdicas adaptadas às características motoras e sensoriais de cada paciente.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 3,
   },
   {
-    slug: 'fala-e-articulacao',
-    name: 'Fala e Articulação Infantil',
-    icon: 'AudioLines',
+    slug: 'psicopedagogia',
+    name: 'Psicopedagogia',
+    icon: 'BookOpen',
     shortDescription:
-      'Avaliação e terapia lúdica para trocas, omissões ou distorções de sons na fala da criança, buscando clareza.',
+      'Apoio no processo de aprendizagem e desenvolvimento de habilidades acadêmicas.',
     fullDescription:
-      'Atendimento direcionado à organização fonológica e à precisão articulatória dos sons da fala infantil, auxiliando a criança a se expressar com mais clareza, naturalidade e segurança.',
-    targetAudience: 'Crianças em idade pré-escolar e escolar com trocas ou alterações nos sons da fala.',
+      'Atendimento psicopedagógico voltado à identificação das potencialidades e barreiras no processo de aprendizagem, oferecendo adaptações e estratégias para alfabetização, raciocínio lógico e autonomia escolar.',
+    targetAudience: 'Crianças e estudantes em idade pré-escolar e escolar.',
     objectives:
-      'Desenvolver a percepção auditiva dos fonemas, adequar padrões articulatórios e aumentar a inteligibilidade da fala infantil.',
+      'Desenvolver atenção, funções executivas, alfabetização, compreensão e estratégias personalizadas de aprendizagem.',
     howItWorks:
-      'Avaliação lúdica dos órgãos fonoarticulatórios e do inventário fonológico seguida de plano terapêutico gradual.',
+      'Avaliação psicopedagógica inicial com plano estruturado e alinhamento constante com a escola e família.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 4,
   },
   {
-    slug: 'voz',
-    name: 'Voz Infantil',
-    icon: 'Mic',
+    slug: 'musicoterapia',
+    name: 'Musicoterapia',
+    icon: 'Music',
     shortDescription:
-      'Cuidado e orientação vocal infantil para rouquidão persistente, esforço ao falar e saúde da voz na infância.',
+      'Uso terapêutico da música para comunicação, expressão e desenvolvimento.',
     fullDescription:
-      'Atuação voltada à avaliação perceptiva da voz infantil e à reabilitação lúdica em casos de disfonia, abuso vocal ou fadiga ao falar durante brincadeiras e atividades escolares.',
-    targetAudience: 'Crianças com queixas de rouquidão frequente ou esforço vocal (mediante avaliação).',
+      'Utilização clínica e intencional do som, ritmo e melodia para estimular a comunicação verbal e não verbal, atenção compartilhada, socialização e expressão emocional.',
+    targetAudience: 'Crianças e jovens no espectro autista ou com desafios comunicativos.',
     objectives:
-      'Promover saúde vocal na infância, coordenação respiratória e hábitos saudáveis de uso da voz sem esforço.',
+      'Favorecer engajamento social, intenção comunicativa, expressão afetiva, ritmo e coordenação através de vivências musicais.',
     howItWorks:
-      'Sessões com atividades lúdicas de respiração e emissão vocal, além de orientações claras para os pais e cuidadores.',
+      'Sessões terapêuticas estruturadas com instrumentos musicais, voz e jogos sonoros ajustados aos objetivos clínicos.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 5,
   },
   {
-    slug: 'motricidade-orofacial',
-    name: 'Motricidade Orofacial Infantil',
-    icon: 'Smile',
+    slug: 'fonoaudiologia',
+    name: 'Fonoaudiologia',
+    icon: 'MessageCircle',
     shortDescription:
-      'Avaliação e terapia das funções de sucção, respiração, mastigação, deglutição e musculatura orofacial infantil.',
+      'Desenvolvimento da comunicação, linguagem, interação social e motricidade orofacial.',
     fullDescription:
-      'Área da fonoaudiologia dedicada ao equilíbrio da musculatura da face, lábios, língua e bochechas em bebês e crianças, atuando em integração quando necessário com odontopediatria e otorrinolaringologia.',
-    targetAudience: 'Bebês e crianças com alterações na respiração, mastigação, deglutição ou hábitos orais.',
+      'Atendimento fonoaudiológico especializado em linguagem infantil, fala, interação social, Comunicação Alternativa e Aumentativa (CAA), Modelo Denver (ESDM) e motricidade orofacial.',
+    targetAudience: 'Bebês e crianças com atrasos na fala, linguagem, comunicação ou alimentação.',
     objectives:
-      'Reequilibrar padrões respiratórios, alimentares, de deglutição e postura muscular orofacial durante o crescimento infantil.',
+      'Estimular linguagem compreensiva e expressiva, comunicação funcional, uso de CAA quando indicado e adequação orofacial.',
     howItWorks:
-      'Exame clínico miofuncional orofacial e sessões lúdicas com exercícios funcionais e acompanhamento evolutivo junto à família.',
+      'Avaliação fonoaudiológica individualizada com escuta aos pais e plano terapêutico alinhado à equipe multidisciplinar.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 6,
   },
   {
-    slug: 'fluencia-e-gagueira',
-    name: 'Fluência e Gagueira Infantil',
-    icon: 'Wind',
+    slug: 'fisioterapia',
+    name: 'Fisioterapia',
+    icon: 'Dumbbell',
     shortDescription:
-      'Acolhimento e suporte clínico para disfluências na infância, favorecendo uma fala mais leve e confiante.',
+      'Fortalecimento muscular, coordenação motora e desenvolvimento físico.',
     fullDescription:
-      'Atendimento sensível e baseado em evidências voltado exclusivamente para crianças em fase de desenvolvimento da fala que vivenciam repetições, prolongamentos ou bloqueios na fluência.',
-    targetAudience: 'Crianças em idade pré-escolar e escolar com disfluências ou gagueira.',
+      'Atuação fisioterapêutica pediátrica com foco em fortalecimento muscular, postura, marcha, equilíbrio e recursos intensivos como o método PediaSuit.',
+    targetAudience: 'Crianças com necessidades motoras, hipotonia, alterações posturais ou atraso motor.',
     objectives:
-      'Reduzir tensões associadas à fala, orientar o ambiente comunicativo familiar e fortalecer a autoconfiança da criança.',
+      'Desenvolver força muscular, controle postural, coordenação motora ampla e independência física funcional.',
     howItWorks:
-      'Avaliação específica da fluência infantil, orientação ativa aos pais e acompanhamento terapêutico contínuo.',
+      'Avaliação físico-funcional detalhada e sessões com equipamentos terapêuticos e exercícios lúdicos.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 7,
   },
   {
-    slug: 'avaliacao-fonoaudiologica',
-    name: 'Avaliação Fonoaudiológica Infantil',
-    icon: 'ClipboardCheck',
+    slug: 'nutricao',
+    name: 'Nutrição',
+    icon: 'Apple',
     shortDescription:
-      'Processo inicial estruturado para compreender o desenvolvimento comunicativo da criança e orientar a família.',
+      'Orientação nutricional especializada em seletividade alimentar.',
     fullDescription:
-      'Etapa fundamental de escuta dos pais, observação clínica lúdica e aplicação de protocolos infantis para mapear potencialidades e necessidades de fala, linguagem, aprendizagem ou motricidade orofacial.',
-    targetAudience: 'Bebês e crianças em busca de esclarecimento clínico ou início de acompanhamento.',
+      'Acompanhamento nutricional focado em seletividade alimentar, saúde intestinal e construção gradual de novos hábitos alimentares de forma respeitosa ao perfil sensorial da criança.',
+    targetAudience: 'Crianças com seletividade alimentar, restrições sensoriais ou necessidades nutricionais no TEA.',
     objectives:
-      'Compreender o desenvolvimento global da criança, dialogar com os responsáveis e propor um plano terapêutico individualizado quando indicado.',
+      'Ampliar repertório alimentar com respeito sensorial, garantir adequação nutricional e orientar a rotina alimentar da família.',
     howItWorks:
-      'Realizada em encontros de anamnese com os responsáveis, sessões lúdicas com a criança e devolutiva detalhada.',
+      'Anamnese nutricional detalhada com os responsáveis e estratégias graduais de exposição e educação alimentar.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 8,
   },
   {
-    slug: 'orientacao-familiar',
-    name: 'Orientação Familiar',
-    icon: 'Users',
+    slug: 'acompanhamento-terapeutico',
+    name: 'Acompanhamento Terapêutico',
+    icon: 'UserCheck',
     shortDescription:
-      'Encontros dedicados a acolher dúvidas dos pais e construir estratégias práticas para o cotidiano da criança.',
+      'Suporte individualizado no ambiente natural para desenvolvimento de habilidades sociais e autonomia.',
     fullDescription:
-      'Espaço de diálogo e parceria com pais, mães, responsáveis e cuidadores para potencializar estímulos naturais de comunicação nas brincadeiras, refeições e rotina infantil.',
-    targetAudience: 'Pais, mães, responsáveis e cuidadores de bebês e crianças.',
+      'Acompanhamento terapêutico (AT) realizado nos ambientes naturais da criança — como escola, domicílio e contextos sociais — promovendo generalização das habilidades treinadas em clínica.',
+    targetAudience: 'Crianças que necessitam de suporte individualizado na escola ou rotina cotidiana.',
     objectives:
-      'Oferecer segurança, clareza e ferramentas cotidianas que favoreçam o desenvolvimento infantil fora do consultório.',
+      'Generalizar habilidades sociais, comunicativas e de autonomia no ambiente escolar e comunitário.',
     howItWorks:
-      'Sessões agendadas com escuta acolhedora e orientações práticas adaptadas à rotina de cada família.',
+      'Atuação direta do acompanhante terapêutico sob supervisão clínica integrada com a equipe multidisciplinar.',
     confirmationStatus: 'confirmed',
     active: 1,
     sortOrder: 9,
-  },
-  {
-    slug: 'audicao',
-    name: 'Audição Infantil',
-    icon: 'Ear',
-    shortDescription:
-      'Área sujeita à confirmação de disponibilidade pela equipe clínica. Consulte nossa administração.',
-    fullDescription:
-      'Atendimento relacionado ao desenvolvimento e habilitação auditiva infantil, cuja oferta e modalidades específicas devem ser confirmadas diretamente com a equipe da clínica adaptaTO.',
-    targetAudience: 'Crianças (disponibilidade a confirmar diretamente pela administração da clínica).',
-    objectives:
-      'Confirmar disponibilidade de avaliação ou acompanhamento auditivo infantil junto à equipe responsável.',
-    howItWorks:
-      'Esta especialidade encontra-se sinalizada como pendente de confirmação oficial no painel administrativo.',
-    confirmationStatus: 'to_confirm',
-    active: 1,
-    sortOrder: 10,
   },
 ];
 
 export const DEFAULT_PROFESSIONALS_SEED: Professional[] = [
   {
     id: 1,
-    name: 'Dra. Camila Mendes',
-    specialtySummary: 'Linguagem Infantil · Desenvolvimento da Comunicação · Orientação Familiar',
-    crfa: 'CRFa a informar pela clínica',
-    bio: '[Perfil modelo editável] Fonoaudióloga dedicada ao atendimento acolhedor de bebês, crianças e famílias, com foco no respeito ao ritmo de desenvolvimento e comunicação funcional.',
+    name: 'Sumara Najla',
+    specialtySummary: 'Terapeuta Ocupacional · Fundadora e Supervisão Técnica',
+    crfa: 'CREFITO · Terapia Ocupacional',
+    bio: 'Terapeuta Ocupacional, fundadora do Espaço Adapta T.O (desde 2019), dedicada ao atendimento clínico, Integração Sensorial e supervisão técnica multidisciplinar em TEA.',
     photoUrl: '/src/assets/images/professional_portrait_one_1795193186394.jpg',
     active: true,
     workingHours: DEFAULT_WEEKLY_SCHEDULE,
-    specialtyIds: [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    specialtyIds: [2, 3, 9],
   },
   {
     id: 2,
-    name: 'Dr. Lucas Ferreira',
-    specialtySummary: 'Fala e Articulação Infantil · Motricidade Orofacial · Fluência Infantil',
-    crfa: 'CRFa a informar pela clínica',
-    bio: '[Perfil modelo editável] Fonoaudiólogo dedicado ao atendimento infantil, com foco em articulação da fala, motricidade orofacial, fluência e acompanhamento individualizado junto às famílias.',
+    name: 'Equipe Multidisciplinar Adapta T.O',
+    specialtySummary: 'Psicologia · Fonoaudiologia · Psicopedagogia · Fisioterapia · Nutrição · Musicoterapia',
+    crfa: 'Corpo Clínico Especializado em TEA',
+    bio: 'Equipe multidisciplinar integrada atuando com ABA, Modelo Denver (ESDM), CAA, Integração Sensorial (IS) e PediaSuit nas unidades Matriz e Filial em Cuiabá/MT.',
     photoUrl: '/src/assets/images/professional_portrait_two_1795193185516.jpg',
     active: true,
     workingHours: DEFAULT_WEEKLY_SCHEDULE,
@@ -352,36 +337,36 @@ export const DEFAULT_PROFESSIONALS_SEED: Professional[] = [
 export const DEFAULT_FAQS_SEED: FaqItem[] = [
   {
     id: 1,
-    question: 'Como funciona a primeira consulta na adaptaTO?',
+    question: 'Como funciona a avaliação inicial no Espaço Adapta T.O?',
     answer:
-      'O primeiro encontro costuma ser uma avaliação infantil ou entrevista de acolhimento com os pais, onde ouvimos as queixas, observamos a comunicação da criança e explicamos os próximos passos.',
+      'Na avaliação inicial, ouvimos atentamente a família e compreendemos as características e necessidades individuais para indicar o plano terapêutico multidisciplinar mais adequado.',
     category: 'Atendimento',
     sortOrder: 1,
     active: true,
   },
   {
     id: 2,
-    question: 'Ao solicitar um horário pelo site, minha consulta já está confirmada?',
+    question: 'Quais abordagens terapêuticas são utilizadas na clínica?',
     answer:
-      'Não. O envio pelo site registra uma solicitação de agendamento com status pendente. Nossa equipe verifica a agenda e entra em contato (por telefone ou WhatsApp) para confirmar oficialmente o horário.',
-    category: 'Agendamento',
+      'Trabalhamos com abordagens baseadas em evidências científicas, incluindo Análise do Comportamento Aplicada (ABA), Modelo Denver de Intervenção Precoce (ESDM), Comunicação Alternativa e Aumentativa (CAA), Integração Sensorial (IS) e PediaSuit.',
+    category: 'Abordagens',
     sortOrder: 2,
     active: true,
   },
   {
     id: 3,
-    question: 'A clínica atende apenas crianças?',
+    question: 'Quais são os endereços e horários de funcionamento?',
     answer:
-      'Sim. A adaptaTO é especializada exclusivamente no atendimento fonoaudiológico infantil, acompanhando bebês e crianças em cada fase da infância, sempre em parceria com os pais e responsáveis.',
-    category: 'Especialidades',
+      'Atendemos de Segunda a Sexta, das 8h às 18h, em duas unidades em Cuiabá/MT: Matriz (Rua Major Gama, 950, Centro Sul) e Filial (Rua Barão de Melgaço, 2350, Edifício Barão Center, Sala 104, Centro Sul).',
+    category: 'Unidades',
     sortOrder: 3,
     active: true,
   },
   {
     id: 4,
-    question: 'Como posso remarcar ou cancelar uma solicitação?',
+    question: 'Ao solicitar um horário pelo site, minha consulta já está confirmada?',
     answer:
-      'Você pode consultar ou cancelar seu protocolo diretamente na aba "Acompanhar protocolo" na página de Agendamento ou entrar em contato com nossa equipe pelo WhatsApp.',
+      'O envio pelo site registra uma solicitação na agenda com status pendente e gera seu código de protocolo. Nossa recepção confirma os detalhes e retorna por telefone ou WhatsApp para oficializar o horário.',
     category: 'Agendamento',
     sortOrder: 4,
     active: true,
@@ -390,7 +375,7 @@ export const DEFAULT_FAQS_SEED: FaqItem[] = [
     id: 5,
     question: 'Como meus dados pessoais são protegidos?',
     answer:
-      'Seguimos as diretrizes da Lei Geral de Proteção de Dados (LGPD). Coletamos apenas os dados estritamente necessários para o contato e agendamento, sem expor informações públicas de pacientes.',
+      'Seguimos a Lei Geral de Proteção de Dados (LGPD). Coletamos apenas as informações estritamente necessárias para contato e organização do agendamento.',
     category: 'Privacidade',
     sortOrder: 5,
     active: true,
@@ -422,24 +407,89 @@ function toHHMM(totalMinutes: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 }
 
+const WEEKDAY_SHORT_FB = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+const WEEKDAY_FULL_FB = [
+  'Domingo',
+  'Segunda-feira',
+  'Terça-feira',
+  'Quarta-feira',
+  'Quinta-feira',
+  'Sexta-feira',
+  'Sábado',
+];
+
 export function computeFallbackSlotsForDate(
   professional: Professional | undefined,
-  dateStr: string
-): { slots: string[]; blocked: boolean; reason?: string } {
+  dateStr: string,
+  clinicAddress?: string
+): {
+  slots: string[];
+  slotDetails: SlotDetail[];
+  occupiedCount: number;
+  blockedCount: number;
+  totalCount: number;
+  blocked: boolean;
+  reason?: string;
+  weekdayShort: string;
+  weekdayFull: string;
+  location: string;
+} {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const weekdayIdx = /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+    ? new Date(Date.UTC(y, (m || 1) - 1, d || 1)).getUTCDay()
+    : 0;
+  const weekdayShort = WEEKDAY_SHORT_FB[weekdayIdx] || '';
+  const weekdayFull = WEEKDAY_FULL_FB[weekdayIdx] || '';
+  const location =
+    clinicAddress && !clinicAddress.toLowerCase().includes('a confirmar')
+      ? `Espaço Adapta T.O · Cuiabá/MT`
+      : 'Espaço Adapta T.O · Unidade Matriz / Filial';
+
   if (!professional || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-    return { slots: [], blocked: true, reason: 'Profissional ou data indisponível.' };
+    return {
+      slots: [],
+      slotDetails: [],
+      occupiedCount: 0,
+      blockedCount: 0,
+      totalCount: 0,
+      blocked: true,
+      reason: 'Profissional ou data indisponível.',
+      weekdayShort,
+      weekdayFull,
+      location,
+    };
   }
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   if (dateStr < todayStr) {
-    return { slots: [], blocked: true, reason: 'Data passada indisponível.' };
+    return {
+      slots: [],
+      slotDetails: [],
+      occupiedCount: 0,
+      blockedCount: 0,
+      totalCount: 0,
+      blocked: true,
+      reason: 'Data passada indisponível.',
+      weekdayShort,
+      weekdayFull,
+      location,
+    };
   }
 
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const weekdayKey = String(new Date(Date.UTC(y, (m || 1) - 1, d || 1)).getUTCDay());
-  const dayConfig = professional.workingHours[weekdayKey];
+  const dayConfig = professional.workingHours[String(weekdayIdx)];
   if (!dayConfig || !dayConfig.enabled) {
-    return { slots: [], blocked: false, reason: 'Sem atendimento neste dia da semana.' };
+    return {
+      slots: [],
+      slotDetails: [],
+      occupiedCount: 0,
+      blockedCount: 0,
+      totalCount: 0,
+      blocked: false,
+      reason: `Sem atendimento às ${weekdayFull.toLowerCase()}s.`,
+      weekdayShort,
+      weekdayFull,
+      location,
+    };
   }
 
   const startMin = toMinutes(dayConfig.start);
@@ -451,13 +501,39 @@ export function computeFallbackSlotsForDate(
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
   const slots: string[] = [];
+  const slotDetails: SlotDetail[] = [];
   for (let current = startMin; current + slotMinutes <= endMin; current += slotMinutes) {
     const slotEnd = current + slotMinutes;
     if (hasBreak && current < breakEndMin && slotEnd > breakStartMin) continue;
-    if (dateStr === todayStr && current <= nowMinutes + 15) continue;
-    slots.push(toHHMM(current));
+    const timeStr = toHHMM(current);
+    if (dateStr === todayStr && current <= nowMinutes + 15) {
+      slotDetails.push({
+        time: timeStr,
+        status: 'indisponivel',
+        label: 'Horário encerrado',
+        location,
+      });
+      continue;
+    }
+    slots.push(timeStr);
+    slotDetails.push({
+      time: timeStr,
+      status: 'livre',
+      label: 'Disponível',
+      location,
+    });
   }
-  return { slots, blocked: false };
+  return {
+    slots,
+    slotDetails,
+    occupiedCount: 0,
+    blockedCount: 0,
+    totalCount: slotDetails.length,
+    blocked: false,
+    weekdayShort,
+    weekdayFull,
+    location,
+  };
 }
 
 export function computeFallbackMonthAvailability(
@@ -474,9 +550,44 @@ export function computeFallbackMonthAvailability(
     results.push({
       date,
       availableCount: info.slots.length,
+      occupiedCount: info.occupiedCount,
+      blockedCount: info.blockedCount,
+      totalCount: info.totalCount,
       blocked: info.blocked,
       reason: info.reason,
     });
   }
   return results;
+}
+
+export function computeFallbackLiveWeek(
+  professional: Professional | undefined,
+  startDateStr?: string,
+  clinicAddress?: string
+): LiveScheduleDay[] {
+  const baseDateStr =
+    startDateStr && /^\d{4}-\d{2}-\d{2}$/.test(startDateStr)
+      ? startDateStr
+      : new Date().toISOString().slice(0, 10);
+  const [y, m, d] = baseDateStr.split('-').map(Number);
+  const days: LiveScheduleDay[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const dt = new Date(Date.UTC(y, (m || 1) - 1, (d || 1) + offset));
+    const date = dt.toISOString().slice(0, 10);
+    const info = computeFallbackSlotsForDate(professional, date, clinicAddress);
+    days.push({
+      date,
+      weekdayShort: info.weekdayShort,
+      weekdayFull: info.weekdayFull,
+      availableCount: info.slots.length,
+      occupiedCount: info.occupiedCount,
+      blockedCount: info.blockedCount,
+      totalCount: info.totalCount,
+      blocked: info.blocked,
+      reason: info.reason,
+      location: info.location,
+      slots: info.slotDetails,
+    });
+  }
+  return days;
 }

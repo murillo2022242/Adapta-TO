@@ -24,6 +24,7 @@ import type {
   Specialty,
   WeeklySchedule,
 } from '../../types.ts';
+import { adminFetch } from '../../utils/adminAuthFetch.ts';
 
 interface AgendaTabProps {
   user: AuthUser;
@@ -222,7 +223,7 @@ export function AgendaTab({
     setActionMessage(null);
     setActionError(null);
     try {
-      const res = await fetch(`/api/admin/appointments/${id}`, {
+      const res = await adminFetch(`/api/admin/appointments/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status }),
@@ -262,7 +263,7 @@ export function AgendaTab({
     if (!editingAppt) return;
     setActionError(null);
     try {
-      const res = await fetch(`/api/admin/appointments/${editingAppt.id}`, {
+      const res = await adminFetch(`/api/admin/appointments/${editingAppt.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editForm),
@@ -282,7 +283,7 @@ export function AgendaTab({
 
   const deleteAppointment = async (appt: Appointment) => {
     setActionError(null);
-    const res = await fetch(`/api/admin/appointments/${appt.id}`, { method: 'DELETE' });
+    const res = await adminFetch(`/api/admin/appointments/${appt.id}`, { method: 'DELETE' });
     if (res.ok) {
       setActionMessage(`Agendamento ${appt.protocolCode} excluído.`);
       await onRefresh();
@@ -316,7 +317,7 @@ export function AgendaTab({
     e.preventDefault();
     setActionError(null);
     try {
-      const res = await fetch('/api/admin/appointments', {
+      const res = await adminFetch('/api/admin/appointments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAppt),
@@ -339,7 +340,7 @@ export function AgendaTab({
     setActionError(null);
     setActionMessage(null);
     try {
-      const res = await fetch('/api/admin/blocks', {
+      const res = await adminFetch('/api/admin/blocks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -367,7 +368,13 @@ export function AgendaTab({
   };
 
   const deleteBlock = async (id: number) => {
-    await fetch(`/api/admin/blocks/${id}`, { method: 'DELETE' });
+    setActionError(null);
+    const res = await adminFetch(`/api/admin/blocks/${id}`, { method: 'DELETE' });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setActionError(json.error || 'Erro ao remover bloqueio.');
+      return;
+    }
     await onRefresh();
   };
 
@@ -376,7 +383,7 @@ export function AgendaTab({
     setActionError(null);
     setActionMessage(null);
     try {
-      const res = await fetch(`/api/admin/professionals/${editableProf.id}`, {
+      const res = await adminFetch(`/api/admin/professionals/${editableProf.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workingHours: activeSchedule }),
@@ -399,7 +406,7 @@ export function AgendaTab({
     setActionError(null);
     setActionMessage(null);
     try {
-      const res = await fetch('/api/admin/apply-schedule-all', {
+      const res = await adminFetch('/api/admin/apply-schedule-all', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ workingHours: activeSchedule }),
